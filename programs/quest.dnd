@@ -1,0 +1,73 @@
+hero: {
+    String name = "Garrick";
+    String class = "Paladin";
+    HP hp = 30;
+    AC ac = 15;
+    String rightHandWeapon = "Spada dritta";
+    Int strBonus = 3;
+}
+foe: {
+    // Ora possiamo usare nomi puliti e generici grazie al namespace!
+    String name = "Drago Rosso";
+    HP hp = 40;
+    AC ac = 14;
+}
+quest: {
+    Int round = 1;
+    // Uso foe.name
+    print: i"Inizia la quest contro il ${foe.name}!";
+    
+    // Uso hero.hp e foe.hp
+    while (hero.hp > 0 && foe.hp > 0) {
+        print: i"--- Round ${round} ---";
+        Int roll = random;
+        print: i"risultato lancio: ${roll}";
+        
+        switch (roll) {
+            case 1: {
+                print: "Fallimento Critico! Manchi clamorosamente il bersaglio.";
+                hero.hp -= 2;
+            }
+            case 20: {
+                // Uso hero.rightHandWeapon e foe.name
+                print: i"Successo Critico! la tua ${hero.rightHandWeapon} trafigge il ${foe.name}";
+                foe.hp -= 10;
+            }
+            default: {
+                // Uso hero.strBonus e foe.ac
+                if (roll + hero.strBonus >= foe.ac) {
+                    foe.hp -= 5;
+                    print: i"Colpito! Il Drago subisce danni. HP Drago: ${foe.hp}";
+                } else {
+                    print: "Mancato! Il Drago schiva l'attacco.";
+                }
+            }
+        }
+        
+        // Contrattacco del mostro se è ancora vivo
+        if (foe.hp > 0) {
+            print: i"il ${foe.name} contrattacca!";
+            Int foe_roll = random;
+            // Uso hero.ac
+            if (foe_roll >= hero.ac) {
+                hero.hp -= 4;
+                print: i"Il colpo va a segno, subisci danni! HP Eroe: ${hero.hp}";
+            } else {
+                print: "Schivato il soffio di fuoco!";
+            }
+        }
+        
+        round++;
+    }
+    
+    // Uso hero.hp
+    String esito = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
+    print: i"Esito finale della Quest: ${esito} al round ${round - 1}";
+    
+    if (hero.hp > 0) {
+        Gold premio = 150.5;
+        print: i"Hai guadagnato ${premio}!";
+    } else {
+        print: "Il tuo corpo riposa nelle caverne del drago...";
+    }
+}

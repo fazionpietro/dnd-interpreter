@@ -1,0 +1,589 @@
+package it.univr.dndlang;
+
+import it.univr.dndlang.DnDLangParser.AddSubExprContext;
+import it.univr.dndlang.DnDLangParser.AndExprContext;
+import it.univr.dndlang.DnDLangParser.BoolExprContext;
+import it.univr.dndlang.DnDLangParser.EqualityExprContext;
+import it.univr.dndlang.DnDLangParser.ExprStmtContext;
+import it.univr.dndlang.DnDLangParser.FloatExprContext;
+import it.univr.dndlang.DnDLangParser.IdExprContext;
+import it.univr.dndlang.DnDLangParser.IfStmtContext;
+import it.univr.dndlang.DnDLangParser.IntExprContext;
+import it.univr.dndlang.DnDLangParser.MulDivExprContext;
+import it.univr.dndlang.DnDLangParser.OrExprContext;
+import it.univr.dndlang.DnDLangParser.ParenExprContext;
+import it.univr.dndlang.DnDLangParser.PreIncExprContext;
+import it.univr.dndlang.DnDLangParser.RandomExprContext;
+import it.univr.dndlang.DnDLangParser.RelationalExprContext;
+import it.univr.dndlang.DnDLangParser.StringExprContext;
+import it.univr.dndlang.DnDLangParser.SwitchStmtContext;
+import it.univr.dndlang.DnDLangParser.TernaryExprContext;
+import it.univr.dndlang.DnDLangParser.UnaryExprContext;
+import it.univr.dndlang.DnDLangParser.WhileStmtContext;
+import org.antlr.v4.runtime.ParserRuleContext;
+
+public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
+  private final Enviroment env = new Enviroment();
+  private String currentStructPrefix = "";
+
+  @Override
+  public Object visitProgram(DnDLangParser.ProgramContext ctx) {
+    if (ctx.heroSection() != null) visit(ctx.heroSection());
+    if (ctx.inventorySection() != null) visit(ctx.inventorySection());
+    if (ctx.foeSection() != null) visit(ctx.foeSection());
+    if (ctx.questSection() != null) visit(ctx.questSection());
+    return null;
+  }
+
+  @Override
+  public Object visitHeroSection(DnDLangParser.HeroSectionContext ctx) {
+    currentStructPrefix = "hero."; // Accende il prefisso
+    visitDeclarativeBlock(ctx.block());
+    currentStructPrefix = ""; // Spegne il prefisso
+    return null;
+  }
+
+  @Override
+  public Object visitFoeSection(DnDLangParser.FoeSectionContext ctx) {
+    currentStructPrefix = "foe."; // Accende il prefisso
+    visitDeclarativeBlock(ctx.block());
+    currentStructPrefix = ""; // Spegne il prefisso
+    return null;
+  }
+
+  @Override
+  public Object visitInventorySection(DnDLangParser.InventorySectionContext ctx) {
+    return visitDeclarativeBlock(ctx.block());
+  }
+
+  @Override
+  public Object visitQuestSection(DnDLangParser.QuestSectionContext ctx) {
+    return visit(ctx.block());
+  }
+
+  @Override
+  public Object visitBlock(DnDLangParser.BlockContext ctx) {
+    env.enterBlock();
+    if (ctx.statement() != null) {
+      for (var stmt : ctx.statement()) {
+        visit(stmt);
+      }
+    }
+    env.exitBlock();
+    return null;
+  }
+
+  @Override
+  public Object visitDecl(DnDLangParser.DeclContext ctx) {
+    String declaredType;
+    if (ctx.TYPE_HP() != null) declaredType = "HP";
+    else if (ctx.TYPE_AC() != null) declaredType = "AC";
+    else if (ctx.TYPE_GOLD() != null) declaredType = "Gold";
+    else if (ctx.TYPE_INT() != null) declaredType = "Int";
+    else if (ctx.TYPE_FLOAT() != null) declaredType = "Float";
+    else if (ctx.TYPE_BOOL() != null) declaredType = "Bool";
+    else if (ctx.TYPE_STRING() != null) declaredType = "String";
+    else throw new DnDLangError("Tipo sconosciuto", ctx.getStart().getLine());
+
+    String rawId = ctx.ID().getText();
+    String id = currentStructPrefix + rawId;
+
+    Object value;
+
+    if (ctx.expr() != null) {
+      try {
+        value = visit(ctx.expr());
+      } catch (DnDLangError e) {
+        System.err.println("Errore runtime alla riga " + e.getLine() + ": " + e.getMessage());
+        value = getDefaultValueForType(declaredType, ctx);
+      }
+    } else {
+      value = getDefaultValueForType(declaredType, ctx);
+    }
+
+    value = coerceToDeclaredType(value, declaredType);
+    env.declare(id, value, declaredType);
+    return null;
+  }
+
+  @Override
+  public Object visitAssign(DnDLangParser.AssignContext ctx) {
+    String id = ctx.ID().getText();
+
+    if (!env.contains(id)) {
+      System.err.println(
+          "Errore runtime alla riga "
+              + ctx.getStart().getLine()
+              + ": impossibile assegnare, variabile non dichiarata '"
+              + id
+              + "'");
+      return null;
+    }
+    String declaredType = env.getType(id);
+    Object rightValue;
+
+    try {
+      rightValue = visit(ctx.expr());
+    } catch (DnDLangError e) {
+      System.err.println(
+          "Errore runtime alla riga "
+              + e.getLine()
+              + " durante l'assegnamento di '"
+              + id
+              + "': "
+              + e.getMessage());
+      rightValue = getDefaultValueForType(declaredType, ctx);
+    }
+
+    Object leftValue = null;
+    Object finalValue = null;
+
+    switch (ctx.getChild(1).getText()) {
+      case "=":
+        finalValue = rightValue;
+        break;
+
+      case "+=":
+        leftValue = env.lookup(id);
+        double sum = asDouble(leftValue, ctx) + asDouble(rightValue, ctx);
+        finalValue = areBothIntegers(leftValue, rightValue) ? (int) sum : sum;
+        break;
+
+      case "-=":
+        leftValue = env.lookup(id);
+        double diff = asDouble(leftValue, ctx) - asDouble(rightValue, ctx);
+        finalValue = areBothIntegers(leftValue, rightValue) ? (int) diff : diff;
+        break;
+
+      case "*=":
+        leftValue = env.lookup(id);
+        double prod = asDouble(leftValue, ctx) * asDouble(rightValue, ctx);
+        finalValue = areBothIntegers(leftValue, rightValue) ? (int) prod : prod;
+        break;
+
+      case "/=":
+        leftValue = env.lookup(id);
+        double divRight = asDouble(rightValue, ctx);
+        if (divRight == 0) {
+          throw new DnDLangError("divisione per zero", ctx.getStart().getLine());
+        }
+        double quot = asDouble(leftValue, ctx) / divRight;
+        finalValue = areBothIntegers(leftValue, rightValue) ? (int) quot : quot;
+        break;
+
+      default:
+        throw new DnDLangError(
+            "Errore runtime: assgnamento non riconosciuto", ctx.getStart().getLine());
+    }
+    finalValue = coerceToDeclaredType(finalValue, declaredType);
+    env.assign(id, finalValue);
+
+    return null;
+  }
+
+  @Override
+  public Object visitPostIncExpr(DnDLangParser.PostIncExprContext ctx) {
+    String id = ctx.ID().getText();
+    String declaredType = env.getType(id);
+
+    Object oldValue = env.lookup(id);
+
+    double calcValue = asDouble(oldValue, ctx);
+    if (ctx.PLUS_PLUS() != null) {
+      calcValue += 1.0;
+    } else if (ctx.MINUS_MINUS() != null) {
+      calcValue -= 1.0;
+    } else {
+      throw new DnDLangError(
+          "Runtime error: operatore di incremento non riconosciuto", ctx.getStart().getLine());
+    }
+
+    Object newValue = (oldValue instanceof Integer) ? (int) calcValue : calcValue;
+
+    newValue = coerceToDeclaredType(newValue, declaredType);
+    env.assign(id, newValue);
+
+    return oldValue;
+  }
+
+  @Override
+  public Object visitPreIncExpr(PreIncExprContext ctx) {
+    String id = ctx.ID().getText();
+    String declaredType = env.getType(id);
+
+    Object oldValue = env.lookup(id);
+
+    double calcValue = asDouble(oldValue, ctx);
+    if (ctx.PLUS_PLUS() != null) {
+      calcValue += 1.0;
+    } else if (ctx.MINUS_MINUS() != null) {
+      calcValue -= 1.0;
+    } else {
+      throw new DnDLangError(
+          "Runtime error: operatore di incremento non riconosciuto", ctx.getStart().getLine());
+    }
+
+    Object newValue = (oldValue instanceof Integer) ? (int) calcValue : calcValue;
+
+    newValue = coerceToDeclaredType(newValue, declaredType);
+    env.assign(id, newValue);
+
+    return newValue;
+  }
+
+  @Override
+  public Object visitTernaryExpr(TernaryExprContext ctx) {
+    Object condition = visit(ctx.expr(0));
+    if (!(condition instanceof Boolean)) {
+      throw new DnDLangError(
+          "La condizione dell'operatore ternario deve essere un booleano",
+          ctx.getStart().getLine());
+    }
+
+    if ((Boolean) condition) {
+      return visit(ctx.expr(1));
+
+    } else {
+      return visit(ctx.expr(2));
+    }
+  }
+
+  @Override
+  public Object visitPrintStmt(DnDLangParser.PrintStmtContext ctx) {
+    Object value = visit(ctx.expr() != null ? ctx.expr() : ctx.ISTRING());
+    System.out.println(value);
+    return null;
+  }
+
+  @Override
+  public Object visitIntExpr(IntExprContext ctx) {
+    return Integer.parseInt(ctx.INT().getText());
+  }
+
+  @Override
+  public Object visitFloatExpr(FloatExprContext ctx) {
+    return Double.parseDouble(ctx.FLOAT().getText());
+  }
+
+  @Override
+  public Object visitBoolExpr(BoolExprContext ctx) {
+    return Boolean.parseBoolean(ctx.BOOL().getText());
+  }
+
+  @Override
+  public Object visitStringExpr(StringExprContext ctx) {
+    String str = ctx.STRING().getText();
+    return str.substring(1, str.length() - 1);
+  }
+
+  @Override
+  public Object visitIStringExpr(DnDLangParser.IStringExprContext ctx) {
+    String rawString = ctx.ISTRING().getText();
+    String content = rawString.substring(2, rawString.length() - 1);
+
+    java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\$\\{([^}]+)\\}");
+    java.util.regex.Matcher matcher = pattern.matcher(content);
+    StringBuilder result = new StringBuilder();
+
+    while (matcher.find()) {
+      // Estraiamo l'espressione (es. "hp" oppure "round - 1")
+      String exprText = matcher.group(1).trim();
+      String replacement;
+
+      try {
+        org.antlr.v4.runtime.CharStream input =
+            org.antlr.v4.runtime.CharStreams.fromString(exprText);
+        DnDLangLexer lexer = new DnDLangLexer(input);
+        org.antlr.v4.runtime.CommonTokenStream tokens =
+            new org.antlr.v4.runtime.CommonTokenStream(lexer);
+        DnDLangParser parser = new DnDLangParser(tokens);
+
+        parser.removeErrorListeners();
+
+        DnDLangParser.ExprContext exprCtx = parser.expr();
+
+        if (parser.getNumberOfSyntaxErrors() > 0) {
+          replacement = "[ERRORE SINTASSI IN: " + exprText + "]";
+        } else {
+          Object val = visit(exprCtx);
+
+          if (env.contains(exprText)) {
+            String type = env.getType(exprText);
+            replacement =
+                switch (type) {
+                  case "HP" -> val + " HP";
+                  case "AC" -> val + " AC";
+                  case "Gold" -> val + " gp";
+                  default -> val.toString();
+                };
+          } else {
+            replacement = val.toString();
+          }
+        }
+      } catch (Exception e) {
+        replacement = "[ERRORE RUNTIME: " + exprText + "]";
+      }
+
+      matcher.appendReplacement(result, java.util.regex.Matcher.quoteReplacement(replacement));
+    }
+    matcher.appendTail(result);
+
+    return result.toString();
+  }
+
+  @Override
+  public Object visitRandomExpr(RandomExprContext ctx) {
+    System.out.println("Lancio un d20 in corso...");
+    return new java.util.Random().nextInt(20) + 1;
+  }
+
+  @Override
+  public Object visitIdExpr(IdExprContext ctx) {
+    String id = ctx.ID().getText();
+    if (!env.contains(id)) {
+      throw new DnDLangError("variabile non dichiarata '" + id + "'", ctx.getStart().getLine());
+    }
+    return env.lookup(id);
+  }
+
+  @Override
+  public Object visitParenExpr(ParenExprContext ctx) {
+    return visit(ctx.expr());
+  }
+
+  @Override
+  public Object visitAddSubExpr(AddSubExprContext ctx) {
+    Object left = visit(ctx.expr(0));
+    Object right = visit(ctx.expr(1));
+
+    double l = asDouble(left, ctx);
+    double r = asDouble(right, ctx);
+    double result = 0;
+
+    if (ctx.PLUS() != null) {
+      result = l + r;
+    } else if (ctx.MINUS() != null) {
+      result = l - r;
+    }
+
+    if (areBothIntegers(left, right)) {
+      return (int) result;
+    }
+    return result;
+  }
+
+  @Override
+  public Object visitMulDivExpr(MulDivExprContext ctx) {
+    Object left = visit(ctx.expr(0));
+    Object right = visit(ctx.expr(1));
+
+    double l = asDouble(left, ctx);
+    double r = asDouble(right, ctx);
+    double result = 0;
+
+    if (ctx.STAR() != null) {
+      result = l * r;
+    } else if (ctx.SLASH() != null) {
+      if (r == 0) throw new DnDLangError("divisione per zero", ctx.getStart().getLine());
+      result = l / r;
+    } else if (ctx.PERCENT() != null) {
+      if (r == 0) throw new DnDLangError("modulo per zero", ctx.getStart().getLine());
+      result = l % r;
+    }
+
+    if (areBothIntegers(left, right)) {
+      return (int) result;
+    }
+    return result;
+  }
+
+  @Override
+  public Object visitRelationalExpr(RelationalExprContext ctx) {
+    Object left = visit(ctx.expr(0));
+    Object right = visit(ctx.expr(1));
+
+    double l = asDouble(left, ctx);
+    double r = asDouble(right, ctx);
+
+    if (ctx.LT() != null) return l < r;
+    else if (ctx.LE() != null) return l <= r;
+    else if (ctx.GT() != null) return l > r;
+    else if (ctx.GE() != null) return l >= r;
+
+    throw new DnDLangError("Operatore relazionale non riconosciuto", ctx.getStart().getLine());
+  }
+
+  @Override
+  public Object visitEqualityExpr(EqualityExprContext ctx) {
+    Object left = visit(ctx.expr(0));
+    Object right = visit(ctx.expr(1));
+
+    boolean isEqual;
+
+    if (left instanceof Number && right instanceof Number) {
+      isEqual = asDouble(left, ctx) == asDouble(right, ctx);
+    } else {
+      isEqual = left.equals(right);
+    }
+
+    if (ctx.EQ() != null) return isEqual;
+    else if (ctx.NEQ() != null) return !isEqual;
+
+    throw new DnDLangError("Operatore di confronto non riconosciuto", ctx.getStart().getLine());
+  }
+
+  @Override
+  public Object visitExprStmt(ExprStmtContext ctx) {
+    visit(ctx.expr());
+    return null;
+  }
+
+  @Override
+  public Object visitAndExpr(AndExprContext ctx) {
+    Object left = visit(ctx.expr(0));
+    Object right = visit(ctx.expr(1));
+
+    if (!(left instanceof Boolean) || !(right instanceof Boolean)) {
+      throw new DnDLangError(
+          "l'operatore '&&' richiede due valori booleani", ctx.getStart().getLine());
+    }
+    return (Boolean) left && (Boolean) right;
+  }
+
+  @Override
+  public Object visitOrExpr(OrExprContext ctx) {
+    Object left = visit(ctx.expr(0));
+    Object right = visit(ctx.expr(1));
+
+    if (!(left instanceof Boolean) || !(right instanceof Boolean)) {
+      throw new DnDLangError(
+          "l'operatore '||' richiede due valori booleani", ctx.getStart().getLine());
+    }
+    return (Boolean) left || (Boolean) right;
+  }
+
+  @Override
+  public Object visitUnaryExpr(UnaryExprContext ctx) {
+    Object value = visit(ctx.expr());
+
+    if (ctx.NOT() != null) {
+      if (!(value instanceof Boolean)) {
+        throw new DnDLangError(
+            "l'operatore '!' richiede un valore booleano", ctx.getStart().getLine());
+      }
+      return !(Boolean) value;
+    } else if (ctx.MINUS() != null) {
+      double num = asDouble(value, ctx);
+      if (value instanceof Integer) {
+        return (int) -num;
+      }
+      return -num;
+    }
+    throw new DnDLangError("Operatore unario non riconosciuto", ctx.getStart().getLine());
+  }
+
+  @Override
+  public Object visitIfStmt(IfStmtContext ctx) {
+    Object condition = visit(ctx.expr());
+
+    if (!(condition instanceof Boolean)) {
+      throw new DnDLangError(
+          "la condizione del costrutto 'if' deve essere un booleano", ctx.getStart().getLine());
+    }
+    if ((Boolean) condition) {
+      visit(ctx.block(0));
+    } else if (ctx.block().size() > 1) {
+      visit(ctx.block(1));
+    }
+    return null;
+  }
+
+  @Override
+  public Object visitWhileStmt(WhileStmtContext ctx) {
+    while (true) {
+      Object condition = visit(ctx.expr());
+
+      if (!(condition instanceof Boolean)) {
+        throw new DnDLangError(
+            "la condizione del costrutto 'while' deve essere un booleano",
+            ctx.getStart().getLine());
+      }
+
+      if (!(Boolean) condition) {
+        break;
+      }
+
+      visit(ctx.block());
+    }
+    return null;
+  }
+
+  @Override
+  public Object visitSwitchStmt(SwitchStmtContext ctx) {
+    Object switchValue = visit(ctx.expr());
+
+    for (DnDLangParser.CaseBlockContext caseCtx : ctx.caseBlock()) {
+      Object caseValue = visit(caseCtx.expr());
+      boolean isMatch = false;
+
+      if (switchValue instanceof Number && caseValue instanceof Number) {
+        isMatch = asDouble(switchValue, ctx) == asDouble(caseValue, ctx);
+      } else {
+        isMatch = switchValue.equals(caseValue);
+      }
+
+      if (isMatch) {
+        visit(caseCtx.block());
+        return null;
+      }
+    }
+    if (ctx.defaultBlock() != null) {
+      visit(ctx.defaultBlock().block());
+    }
+    return null;
+  }
+
+  // --- Utility Methods ---
+
+  private Object getDefaultValueForType(String type, ParserRuleContext ctx) {
+    return switch (type) {
+      case "HP", "AC", "Int" -> 0;
+      case "Gold" -> 0.0;
+      case "Bool" -> false;
+      case "String" -> "";
+      default -> throw new DnDLangError("Tipo sconosciuto: " + type, ctx.getStart().getLine());
+    };
+  }
+
+  private Object coerceToDeclaredType(Object value, String declaredType) {
+    if ("Gold".equals(declaredType) && value instanceof Integer i) {
+      return i.doubleValue();
+    }
+    if (("HP".equals(declaredType) || "AC".equals(declaredType) || "Int".equals(declaredType))
+        && value instanceof Double d) {
+      return (int) d.doubleValue(); // troncamento esplicito
+    }
+    return value;
+  }
+
+  private Object visitDeclarativeBlock(DnDLangParser.BlockContext ctx) {
+    if (ctx.statement() != null) {
+      for (var stmt : ctx.statement()) {
+        visit(stmt);
+      }
+    }
+    return null;
+  }
+
+  private double asDouble(Object value, ParserRuleContext ctx) {
+    if (value instanceof Number num) {
+      return num.doubleValue();
+    }
+    throw new DnDLangError(
+        "Operazione matematica su un tipo non numerico: " + value, ctx.getStart().getLine());
+  }
+
+  private boolean areBothIntegers(Object left, Object right) {
+    return left instanceof Integer && right instanceof Integer;
+  }
+}

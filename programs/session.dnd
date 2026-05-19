@@ -1,0 +1,134 @@
+hero: {
+    /*
+     * Tordek: Guerriero umano di livello 3.
+     * Equipaggiato con armatura pesante e arma magica.
+     * I modificatori (Mod) sono precalcolati per ottimizzare i calcoli durante il loop.
+     */
+    String name = "Tordek";
+    String class = "Guerriero";
+    String race = "Umano";
+    Int level = 3;
+    
+    Int str = 16;
+    Int strMod = 3;       
+    Int con = 14;
+    Int conMod = 2;       
+    
+    HP hp = 42;           
+    AC ac = 18;           
+    Int prof = 2;         
+    
+    String weapon = "Spada Lunga +1";
+    Int weaponBonus = 1;  
+    Int baseDamage = 5;   
+}
+
+foe: {
+    /*
+     * La Manticora, creatura mostruosa altamente territoriale. 
+     * L'attacco principale considerato in questo script è la scagliata di spine.
+     */
+    String name = "Manticora";
+    HP hp = 55;
+    AC ac = 14;           
+    Int strMod = 4;       
+    Int spikeDamage = 6;  
+}
+
+quest: {
+    /*
+     * QUEST: L'Epurazione della Vetta Insanguinata
+     * Obiettivo: Sconfiggere la bestia che terrorizza i passi montani.
+     * Condizioni ambientali: Il combattimento avviene in una caverna stretta,
+     * non ci sono vie di fuga. Si combatte fino alla morte.
+     */
+    Int round = 1;
+    
+    print: i"INIZIO ENCOUNTER: L'Eroe ${hero.name} (${hero.class} Lv.${hero.level}) affronta la ${foe.name}!";
+    print: i"Scheda Eroe   -> HP: ${hero.hp} | CA: ${hero.ac}";
+    print: i"Scheda Mostro -> HP: ${foe.hp} | CA: ${foe.ac}";
+    print: "----------------------------------------------------------------------\n";
+
+    while (hero.hp > 0 && foe.hp > 0) {
+        print: i"--- ROUND ${round} ---";
+        
+        // Turno del Giocatore: Calcolo del Tiro per Colpire (TxC)
+        Int d20Hero = random; 
+        Int attackRoll = d20Hero + hero.strMod + hero.prof + hero.weaponBonus;
+        print: i"${hero.name} attacca! d20: ${d20Hero} | TxC Totale: ${attackRoll}";
+        
+        switch (d20Hero) {
+            case 1: {
+                print: "FALLIMENTO CRITICO! L'arma sbatte contro la parete rocciosa.";
+                hero.hp -= 1; 
+            }
+            case 20: {
+                // Calcolo danni critici: base moltiplicata + modificatori
+                Int critDamage = (hero.baseDamage * 2) + hero.strMod + hero.weaponBonus;
+                foe.hp -= critDamage;
+                print: i"SUCCESSO CRITICO! La ${foe.name} subisce ${critDamage} danni devastanti!";
+            }
+            default: {
+                if (attackRoll >= foe.ac) {
+                    Int damage = (random % 8 + 1) + hero.strMod + hero.weaponBonus;
+                    foe.hp -= damage;
+                    print: i"COLPITO! Inflitti ${damage} danni. HP Manticora: ${foe.hp}";
+                } else {
+                    print: i"MANCATO! La ${foe.name} schiva con un balzo.";
+                }
+            }
+        }
+        
+        // Turno del Nemico (se sopravvissuto all'attacco)
+        if (foe.hp > 0) {
+            print: i"La ${foe.name} contrattacca lanciando le spine caudali!";
+            
+            Int d20Foe = random;
+            Int foeAttack = d20Foe + foe.strMod;
+            print: i"Il mostro attacca! d20: ${d20Foe} | TxC Totale: ${foeAttack}";
+            
+            if (foeAttack >= hero.ac) {
+                hero.hp -= foe.spikeDamage;
+                print: i"COLPITO! Le spine bucano l'armatura. ${hero.name} subisce ${foe.spikeDamage} danni! HP Eroe: ${hero.hp}";
+            } else {
+                print: i"PARATO! Lo scudo di ${hero.name} respinge l'attacco.";
+            }
+            
+            /*
+             * Evento Speciale: Tossine della Manticora
+             * Se il mostro ottiene un 16 o superiore sul dado naturale, l'attacco è avvelenato.
+             * L'eroe è costretto a un Tiro Salvezza (TS) su Costituzione per dimezzare o annullare.
+             */
+            if (d20Foe >= 16 && hero.hp > 0) {
+                print: "ATTACCO SPECIALE: Una spina era intrisa di veleno!";
+                print: i"${hero.name} esegue un Tiro Salvezza su Costituzione (CD 13).";
+                
+                Int conSave = random + hero.conMod;
+                print: i"Risultato TS: ${conSave}";
+                
+                if (conSave < 13) {
+                    hero.hp -= 8;
+                    print: "TS FALLITO! Il veleno entra in circolo (8 danni extra).";
+                } else {
+                    print: "TS SUPERATO! Il fisico dell'eroe resiste alle tossine.";
+                }
+            }
+        }
+        
+        round++;
+        print: ""; 
+    }
+    
+    print: "----------------------------------------------------------------------";
+    String esito = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
+    
+    // Resoconto quest: il round viene decrementato perché il ciclo aumenta la variabile prima di uscire
+    print: i"FINE QUEST: ${esito} al round ${round - 1}!";
+    
+    if (hero.hp > 0) {
+        Gold bottino = 340.5;
+        print: i"Recuperato dal nido un tesoro pari a ${bottino}.";
+    } else {
+        print: i"La bestia ha trionfato. La vetta appartiene ancora alla ${foe.name}.";
+    }
+}
