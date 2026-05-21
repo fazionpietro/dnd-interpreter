@@ -1,22 +1,14 @@
 hero: {
     HP hp = 20;
 }
+
 quest: {
-    print: "Test 1: Divisione per zero (Dovrebbe mostrare l'errore, assegnare 0 e continuare)";
+    print: "--- Test Fallimento Critico (Fail-Fast) ---";
     Int x = 10;
     Int y = 0;
+    
+    print: "Tentativo di divisione per zero... L'interprete deve bloccarsi immediatamente!";
     Int z = x / y;
-    print: i"Valore di z dopo div/0: ${z}";
-
-    print: "Test 2: Assegnamento composto con divisione per zero (Dovrebbe mostrare l'errore e continuare)";
-    x /= y;
-
-    print: "Test 3: Uso di variabile non dichiarata nell'interpolazione (Mostra avviso e inserisce segnaposto)";
-    print: i"Tentativo di stampare ${variabile_fantasma}";
-
-    print: "Test 4: Errore di tipo nell'operatore ternario (La condizione non è booleana)";
-    Int non_bool = 5;
-    String res = (non_bool) ? "Vero" : "Falso";
-
-    print: "🚀 Fine del test degli errori. Il programma è continuato con successo senza crashare!";
+    
+    print: "Se vedi questa scritta, il Fail-Fast NON sta funzionando!";
 }

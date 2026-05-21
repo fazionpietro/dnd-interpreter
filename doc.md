@@ -1,19 +1,15 @@
-Ecco la documentazione `doc.md` generata per il tuo linguaggio `DnDLang`, strutturata seguendo il modello che hai fornito.
-
----
-
 # DnDLang
 
 Un Domain Specific Language (DSL) per la descrizione, simulazione e risoluzione di incontri e sessioni di combattimento in stile Dungeons & Dragons.
 
 ## Indice
 
-1. [Introduzione](https://www.google.com/search?q=%231-introduzione)
-2. [Guida Rapida](https://www.google.com/search?q=%232-guida-rapida)
-3. [Sintassi](https://www.google.com/search?q=%233-sintassi)
-4. [Semantica](https://www.google.com/search?q=%234-semantica)
-5. [Implementazione](https://www.google.com/search?q=%235-implementazione)
-6. [Programmi di Test](https://www.google.com/search?q=%236-programmi-di-test)
+1. [Introduzione](#1-introduzione)
+2. [Guida Rapida](#2-guida-rapida)
+3. [Sintassi](#3-sintassi)
+4. [Semantica e Funzionalità Avanzate](#4-semantica-e-funzionalità-avanzate)
+5. [Implementazione](#5-implementazione)
+6. [Programmi di Test](#6-programmi-di-test)
 
 ---
 
@@ -21,18 +17,15 @@ Un Domain Specific Language (DSL) per la descrizione, simulazione e risoluzione 
 
 **DnDLang** è un linguaggio di programmazione imperativo sviluppato come DSL per la gestione e la simulazione di schede personaggio e combattimenti (encounter) nei giochi di ruolo cartacei.
 
-### Caratteristiche principali
+Il linguaggio è stato progettato soddisfacendo i requisiti di base e implementando diverse **funzionalità avanzate**, candidandosi al punteggio massimo (con Lode).
 
-* **Tipizzazione statica esplicita** con tipi di dominio dedicati all'universo di D&D (`HP`, `AC`, `Gold`).
-* **Struttura a blocchi semantici**: sezioni distinte per definire le entità (`hero`, `foe`, `inventory`) e una per il flusso di esecuzione principale (`quest`).
-* **Costrutti iterativi e condizionali**: `while`, `if`-`else` e `switch`-`case`-`default`.
-* **Meccaniche RPG native**: keyword `random` integrata per simulare il lancio di un dado a 20 facce (d20).
-* **Zucchero sintattico**: assegnamenti composti (`+=`, `-=`, `*=`, `/=`), incremento/decremento (`++`, `--`), operatore ternario (`_ ? _ : _`) e stringhe interpolate (`i"...${expr}..."`).
-* **Gestione tollerante degli errori (Resilience)**: in caso di errori a runtime (come divisioni per zero o variabili non trovate nell'interpolazione), l'interprete segnala il problema fornendo valori di default senza far crashare la simulazione.
+### Caratteristiche principali e Funzionalità Avanzate
 
-### Contesto applicativo
-
-DnDLang è pensato per Game Master o giocatori che vogliono automatizzare la risoluzione di scontri complessi, calcolare statistiche di combattimento, o testare l'efficacia (playtest) di mostri ed eroi prima di una sessione effettiva.
+- **Funzioni (Funzionalità Avanzata - Livello 2)**: Supporto per la dichiarazione di funzioni con parametri passati per valore, tipi di ritorno, scoping isolato (record di attivazione) e supporto completo alla **ricorsione**.
+- **Flusso di Controllo Condizionato (Funzionalità Avanzata - Livello 2)**: Implementazione del costrutto `switch-case` con blocco `default` opzionale.
+- **Zucchero Sintattico (Funzionalità Avanzata - Livello 1)**: Assegnamenti composti (`+=`, `-=`, `*=`, `/=`), operatori di pre/post incremento (`++`, `--`), operatore ternario (`cond ? vero : falso`) e stringhe interpolate con valutazione eager (`i"Danno: ${d8 + mod}"`).
+- **Meccaniche RPG native**: Addio alle generazioni casuali astratte. Il linguaggio integra i dadi poliedrici ufficiali (`d20`, `d12`, `d10`, `d8`, `d6`, `d4`, `d3`) come espressioni native.
+- **Namespace Autogenerati**: Struttura a blocchi semantici (`hero`, `foe`, `quest`) che organizza automaticamente le variabili qualificandole (es. `hero.hp`).
 
 ---
 
@@ -40,43 +33,50 @@ DnDLang è pensato per Game Master o giocatori che vogliono automatizzare la ris
 
 ### Requisiti
 
-* **Java**: Necessario per compilare ed eseguire il parser e l'interprete.
-* **ANTLR 4**: Per la generazione del lexer e del parser a partire dalla grammatica `DnDLang.g4`.
-* **Maven**: Consigliato per la gestione delle dipendenze e l'esecuzione.
+- **Java 17+**
+- **ANTLR 4**
+- **Maven** (Consigliato per la gestione delle dipendenze e l'esecuzione)
 
-### Eseguire un programma
+### Generazione ed Esecuzione
 
-L'interprete può essere lanciato tramite Maven, specificando il file sorgente `.dnd` come argomento:
+Per generare l'interprete a partire dai file sorgenti e avviare uno script:
 
 ```bash
+# 1. Compila il progetto e genera le classi Lexer e Parser tramite ANTLR
+mvn clean compile
+
+# 2. Esegui uno script specificando il percorso del file .dnd
 mvn exec:java -Dexec.mainClass="it.univr.dndlang.Main" -Dexec.args="programs/nome_file.dnd"
+```
 
 ```
 
-### Hello World
+```
 
-Un semplice programma in DnDLang che istanzia un eroe e ne stampa le caratteristiche.
+### Hello World (con Funzioni e Dadi)
+
+Un semplice programma che mostra dichiarazioni, funzioni e l'uso del d20 nativo.
 
 ```dnd
+def Int calcolaTxC(Int d20Roll, Int mod) {
+    return d20Roll + mod;
+}
+
 hero: {
     String name = "Aelar";
-    String class= "Monk";
     HP hp       = 24;
     AC ac       = 15;
+    Int strMod  = 3;
 }
-inventory: { Gold gold = 50.0; }
+
 quest: {
-    print: i"Eroe: ${hero.name} | Class: ${hero.class} | HP: ${hero.hp} | AC: ${hero.ac} | Gold: ${hero.gold}";
+    Int roll = d20;
+    Int totale = calcolaTxC(roll, hero.strMod);
+    print: i"Eroe: ${hero.name} | HP: ${hero.hp} | AC: ${hero.ac}";
+    print: i"Attacco sferrato! Risultato: ${totale}";
 }
 
 ```
-
-> **Output** 
-> 
-> 
-> 
-> 
-> Eroe: Aelar | Class: Monk | HP: 24 HP | AC: 15 AC | Gold: 50.0 gp
 
 ---
 
@@ -84,236 +84,139 @@ quest: {
 
 ### 3.1 Struttura di un programma
 
-Un programma DnDLang è diviso in quattro sezioni opzionali, ma solitamente si chiude sempre con la sezione `quest`:
+Un programma DnDLang impone un ordine strutturale rigido per separare dichiarativo ed eseguibile:
 
 ```antlr
-program : heroSection? inventorySection? foeSection? questSection EOF ;
+program : functionSection? heroSection? foeSection? questSection EOF ;
 
 ```
 
-* **`heroSection`** (`hero: { ... }`): Definisce le statistiche e l'equipaggiamento dell'eroe. Le variabili dichiarate qui acquisiscono automaticamente il prefisso `hero.`.
-* **`foeSection`** (`foe: { ... }`): Definisce le statistiche del mostro o nemico. Le variabili acquisiscono il prefisso `foe.`.
-* **`inventorySection`** (`inventory: { ... }`): Definisce le risorse o l'oro.
-* **`questSection`** (`quest: { ... }`): Il blocco logico principale dove avvengono le valutazioni, gli attacchi e i calcoli.
+- **`functionSection`** (`def Type name() { ... }`): Sezione **esclusivamente dichiarativa** (non eseguibile direttamente) dedicata alle funzioni.
+- **`heroSection / foeSection`** (`hero: { ... }`, `foe: { ... }`): Definiscono i record per eroe e nemico. Generano i namespace `hero.` e `foe.`.
+- **`questSection`** (`quest: { ... }`): Il blocco logico principale (Main loop) dove avvengono le valutazioni.
 
-### 3.2 Tipi di dato
+### 3.2 Tipi di dato e Dadi Poliedrici
 
-| Tipo | Descrizione | Esempio |
-| --- | --- | --- |
-| `Int` | Numero intero | `10`, `-3` |
-| `Float` | Numero con virgola mobile | `3.14` |
-| `Bool` | Valore logico | `true`, `false` |
-| `String` | Stringa di testo | `"Spada"` |
-| `HP` | Punti Ferita (Health Points, compatibile con numerici) | `42` |
-| `AC` | Classe Armatura (Armor Class, compatibile con numerici) | `18` |
-| `Gold` | Monete d'oro (compatibile con virgola mobile) | `340.5` |
+Il linguaggio è staticamente tipizzato e supporta tipi generici e di dominio:
 
-I tipi di dominio `HP`, `AC` e `Gold` aggiungono valore semantico e vengono visualizzati con suffissi specifici (es. `HP`, `AC`, `gp`) quando stampati tramite interpolazione.
+- **Base**: `Int`, `Float`, `Bool`, `String`, `Void` (solo per funzioni).
+- **Dominio**: `HP` (Punti Ferita), `AC` (Classe Armatura), `Gold` (Monete d'oro).
 
-### 3.3 Espressioni e Operatori
-
-DnDLang supporta i classici operatori aritmetico-logici e relazionali:
-
-* Aritmetici: `+`, `-`, `*`, `/`, `%`
-* Incremento: `++`, `--` (pre e post)
-* Assegnamento: `=`, `+=`, `-=`, `*=`, `/=`
-* Relazionali: `==`, `!=`, `<`, `>`, `<=`, `>=`
-* Logici: `&&`, `||`, `!`
-* Ternario: `condizione ? vero : falso`
-
-Inoltre, è presente l'operatore speciale **`random`**, che restituisce un intero generato casualmente tra $1$ e $20$, simulando un tiro di d20.
-
-### 3.4 Costrutti di controllo
-
-**If-Else:**
-
-```dnd
-if (foeAttack >= hero.ac) {
-    hero.hp -= foe.spikeDamage;
-} else {
-    print: "PARATO!";
-}
-
-```
-
-**Ciclo While:**
-
-```dnd
-while (hero.hp > 0 && foe.hp > 0) {
-    round++;
-}
-
-```
-
-**Switch-Case:**
-
-```dnd
-switch (roll) {
-    case 1: { print: "Fallimento Critico!"; }
-    case 20: { print: "Successo Critico!"; }
-    default: { print: "Attacco normale"; }
-}
-
-```
-
-### 3.5 Stampa e interpolazione
-
-```dnd
-print: "Testo semplice";
-print: i"Danni inflitti: ${hero.strMod + 5}";
-
-```
-
-Il costrutto `print:` accetta una stringa (semplice o interpolata `i"..."`) o una singola espressione, stampandone il risultato. Le espressioni racchiuse in `${}` all'interno di stringhe interpolate vengono valutate a runtime.
+**Dadi Nativi:**
+I token `d20`, `d12`, `d10`, `d8`, `d6`, `d4` e `d3` sono trattati dal lexer come vere e proprie espressioni. Scrivere `Int danno = 2 * d6 + 4;` ordina all'interprete di simulare dinamicamente il lancio.
 
 ---
 
-## 4. Semantica
+## 4. Semantica e Funzionalità Avanzate
 
-### 4.1 Ambiente e Scoping (Namespace)
+### 4.1 Funzioni, Valutazione Eager e Scoping
 
-L'ambiente di esecuzione (`Enviroment`) è strutturato a stack di memorie per supportare lo **scoping lessicale** all'interno dei blocchi `{ ... }`.
-Una particolarità fondamentale di DnDLang è l'autogenerazione dei namespace:
+Le funzioni in DnDLang rispettano una rigorosa semantica _Call-by-Value_ (passaggio per valore) con **valutazione Eager** (ansiosa):
 
-* Ogni variabile dichiarata dentro `hero: { ... }` viene salvata nell'ambiente con il nome reale `hero.nomeVariabile`.
-* Ogni variabile in `foe: { ... }` viene salvata come `foe.nomeVariabile`.
-Questo permette di usare nomi puliti e generici nelle dichiarazioni (es. `String name = "Drago"`) e di accedervi in modo qualificato (es. `foe.name`) nella `quest`.
+1. Gli argomenti passati alla funzione vengono interamente valutati nello scope del chiamante.
+2. L'ambiente (`Environment`) apre un nuovo _Scope_ isolato.
+3. I valori valutati vengono associati (binding) ai parametri formali nel nuovo record di attivazione.
+4. L'esecuzione procede fino al comando `return` o alla fine del blocco, dopodiché lo scope viene distrutto, prevenendo memory leaks.
 
-### 4.2 Coercizione di Tipo
+Questo isolamento gerarchico (lexical scoping) permette il supporto nativo alla **ricorsione**, gestendo correttamente chiamate annidate della stessa funzione senza collisione di variabili.
 
-I tipi numerici di dominio subiscono troncamento o conversione automatica:
+### 4.2 Fail-Fast, Type Checking e Coercizione
 
-* Se a un tipo `HP`, `AC` o `Int` viene assegnato un valore calcolato come `Double`, esso viene troncato esplicitamente a intero.
-* Se al tipo `Gold` viene assegnato un `Integer`, viene promosso a `Double`.
+Il linguaggio implementa una strategia **Fail-Fast** rigorosa. Se si verifica un errore semantico o di runtime (divisione per zero, tipo incompatibile, numero errato di parametri passati a una funzione, variabile non dichiarata), l'interprete lancia un'eccezione custom (`DnDLangError`) che interrompe **immediatamente** l'esecuzione segnalando la riga dell'errore.
 
-### 4.3 Tolleranza agli Errori
+- **Coercizione Implicita**: È ammessa in modo sicuro. I tipi numerici `Int` promossi a `Gold` diventano _Double_, mentre i calcoli su `HP` o `AC` vengono troncati esplicitamente a interi. Le stringhe non compatibili generano un arresto immediato del programma.
 
-A differenza dei linguaggi tradizionali che interrompono l'esecuzione al primo errore non gestito, DnDLang favorisce il proseguimento della sessione (resilience):
+### 4.3 Semantica Operazionale
 
-* **Variabile non dichiarata in assegnamento:** L'operazione viene saltata e l'errore stampato su `stderr`.
-* **Divisione per zero:** Viene intercettata, viene assegnato il valore di default per quel tipo (`0` per gli interi) e lo script continua.
+Il costrutto della **Chiamata di Funzione** (valutata eagerly) e l'**Assegnamento** possono essere descritti dalle seguenti regole di transizione. Sia $\sigma$ lo stato della memoria e $env$ l'ambiente corrente.
 
-### 4.4 Semantica Operazionale
+Regola per la valutazione di un assegnamento semplice:
 
-L'operatore nativo `random` implementa un comportamento non deterministico essenziale per i GDR. Dato lo stato $(\overline{\sigma}, c)$, la sua valutazione produce:
+$$\text{Assign} \quad \frac{(\sigma, \ e) \rightarrow (\sigma, \ v)}{(\sigma, \ \mathtt{id = e;}) \rightarrow (\sigma[id \mapsto v], \ \epsilon)}$$
 
-$$    \text{Random} ~ \frac{
-        -
-    }{
-        (\overline{\sigma},\ \mathtt{random}) \rightarrow (\overline{\sigma},\ n)
-    }
-    ~ n \in \mathbb{N}, \ 1 \le n \le 20$$
+Regola per l'operatore di _Short-Circuit_ logico (`&&`):
 
-Per un assegnamento all'interno di una sezione speciale (es. `heroSection`), l'ambiente $\sigma$ applica un prefisso $p = \text{"hero."}$ all'identificatore $id$:
+$$\text{And-False} \quad \frac{(\sigma, \ e_1) \rightarrow (\sigma, \ \text{false})}{(\sigma, \ e_1 \ \mathtt{\&\&} \ e_2) \rightarrow (\sigma, \ \text{false})}$$
 
-$$    \text{DeclPrefix} ~ \frac{
-        (\overline{\sigma},\ e) \rightarrow (\overline{\sigma},\ v)
-    }{
-        (\overline{\sigma},\ \mathtt{Type}\ id \mathtt{=} \ e) \rightarrow (\sigma[p \cdot id \mapsto v] \cdot \overline{\sigma}',\ \epsilon)
-    }$$
+_(Nota: L'espressione $e_2$ non viene mai valutata, evitando eventuali errori a runtime in essa contenuti)._
 
 ---
 
 ## 5. Implementazione
 
-### 5.1 Struttura del Progetto
+Il DSL è implementato in Java 17 utilizzando **ANTLR 4** per l'analisi lessicale e sintattica, supportato dal pattern architetturale **Visitor**.
 
-Il DSL è implementato in Java utilizzando **ANTLR 4** per la fase di analisi lessicale e sintattica.
-
-* `DnDLang.g4`: Grammatica sorgente.
-* `Main.java`: Entry point che legge il file `.dnd`, genera l'AST ed invoca l'interprete.
-* `DnDInterpreter.java`: Classe centrale che estende `DnDLangBaseVisitor`, implementando la logica di valutazione dei nodi dell'AST.
-* `Enviroment.java`: Struttura dati per la gestione dello scoping e dello stack dei blocchi.
-* `DnDLangError.java`: Eccezione runtime custom che mappa gli errori alla riga del file sorgente.
-
-### 5.2 Compiti dell'Interprete e Zucchero Sintattico
-
-L'interprete `DnDInterpreter` risolve on-the-fly lo zucchero sintattico (come `+=` o `++`) traducendolo nelle rispettive operazioni aritmetiche binarie e aggiornando il record dell'ambiente tramite il metodo `env.assign()`.
-
-### 5.3 Sfide Tecniche: Interpolazione di Stringhe
-
-Una delle feature tecnicamente più complesse è l'**interpolazione delle stringhe** (`i"...${expr}..."`). Per consentire a espressioni complesse (es. `round - 1` o chiamate a variabili namespace) di essere valutate correttamente *all'interno* del testo, l'interprete:
-
-1. Usa una Regex per estrarre la substringa `exprText` contenuta in `${...}`.
-2. Istanzia a runtime un nuovo **sotto-parser ANTLR** (`DnDLangLexer` e `DnDLangParser`) passando l'espressione estratta.
-3. Valuta il frammento di AST risultante richiamando `visit(exprCtx)`.
-4. Applica suffissi automatici (es. " HP" o " gp") se riconosce che l'espressione è una variabile di dominio dichiarata nell'ambiente.
+- **`DnDInterpreter.java`**: La classe core. Estende `DnDLangBaseVisitor` ed esplora l'albero sintattico.
+- **Il trucco del `return**`: L'interruzione del flusso di controllo per restituire un valore da una funzione è implementato sfruttando la Virtual Machine Java tramite una **`ReturnException`** dedicata. Quando `visitReturnStmt` incontra il costrutto, lancia l'eccezione contenente il valore. L'`if/catch`presente in`visitFunctionCallExpr` la intercetta, distrugge lo scope e restituisce il dato pulito, permettendo uscite premature (early exit) della funzione e cicli ricorsivi leggeri.
+- **Stringhe Interpolate Ricorsive**: Il token `i"..."` avvia un'operazione di regex. Ogni stringa `\${expr}` individuata istanzia localmente un mini-parser ANTLR _al volo_ per valutare l'espressione in modo sicuro dentro lo scope attuale, applicando infine i suffissi di dominio (es. `HP` -> `20 HP`).
 
 ---
 
 ## 6. Programmi di Test
 
-### `errors.dnd` – Tolleranza e continuità d'esecuzione
+_(Tutti i file sono inclusi nella cartella `programs`)_
 
-Dimostra la gestione non bloccante degli errori a runtime.
+### `errors.dnd` (Dimostrazione Fail-Fast)
+
+Garantisce che il linguaggio non permetta calcoli illegali, interrompendosi preventivamente.
 
 ```dnd
 hero: { HP hp = 20; }
 quest: {
-    print: "Test 1: Divisione per zero";
+    print: "--- Test Fail-Fast: Divisione per zero ---";
     Int x = 10;
     Int y = 0;
+
+    // Il programma esploderà qui, lanciando un DnDLangError alla riga corretta
     Int z = x / y;
-    print: i"Valore di z dopo div/0: ${z}";
 
-    print: "Test 3: Uso di variabile non dichiarata nell'interpolazione";
-    print: i"Tentativo di stampare ${variabile_fantasma}";
-
-    print: "🚀 Fine del test degli errori. Il programma è continuato con successo senza crashare!";
+    print: "Questa riga non verrà mai stampata!";
 }
 
 ```
 
-*(Durante l'esecuzione, il motore Java stamperà gli errori sullo Standard Error, mentre il programma continuerà allocando valori di fallback sullo Standard Output)*.
+### `session.dnd` (Dimostrazione Ricorsione e Meccaniche Avanzate)
 
-### `quest.dnd` – Combattimento simulato e Namespace
-
-Esempio completo di incontro tra un Paladino e un Drago Rosso.
+Un test complesso che simula un attacco "Furia Berserker" utilizzando una **funzione ricorsiva** in cui il caso base è determinato stocasticamente dai tiri di dado nativi, generando record di attivazione multipli gestiti dal Lexical Scoping.
 
 ```dnd
+def Int furiaBerserker(Int bonusTxC, Int classeArmatura) {
+    Int txc = d20 + bonusTxC;
+
+    if (txc >= classeArmatura) {
+        Int danno = d8 + 1;
+        print: i" > Colpo a segno! Inflitti ${danno} danni.";
+        // Chiamata ricorsiva con fatica (malus al TxC)
+        return danno + furiaBerserker(bonusTxC - 2, classeArmatura);
+    } else {
+        print: i" > L'attacco fallisce.";
+        return 0; // Caso base di uscita
+    }
+}
+
 hero: {
-    String name = "Garrick";
-    String class = "Paladin";
-    HP hp = 30;
-    AC ac = 15;
-    String rightHandWeapon = "Spada dritta";
-    Int strBonus = 3;
+    String name = "Tordek il Barbaro";
+    HP hp = 50;
+    AC ac = 16;
+    Int strMod = 6;
 }
 foe: {
-    String name = "Drago Rosso";
-    HP hp = 40;
+    String name = "Golem di Carne";
+    HP hp = 80;
     AC ac = 14;
 }
 quest: {
-    Int round = 1;
-    print: i"Inizia la quest contro il ${foe.name}!";
-    
-    while (hero.hp > 0 && foe.hp > 0) {
-        print: i"--- Round ${round} ---";
-        Int roll = random;
-        
-        switch (roll) {
-            case 1: { hero.hp -= 2; }
-            case 20: {
-                print: i"Successo Critico! la tua ${hero.rightHandWeapon} trafigge il ${foe.name}";
-                foe.hp -= 10;
-            }
-            default: {
-                if (roll + hero.strBonus >= foe.ac) {
-                    foe.hp -= 5;
-                }
-            }
-        }
-        
-        if (foe.hp > 0) {
-            Int foe_roll = random;
-            if (foe_roll >= hero.ac) { hero.hp -= 4; }
-        }
-        round++;
+    print: i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---";
+    Int danniTotali = furiaBerserker(hero.strMod, foe.ac);
+
+    if (danniTotali > 0) {
+        foe.hp -= danniTotali;
+        print: i"La Furia ha inflitto un totale di ${danniTotali} danni! HP Golem: ${foe.hp}";
     }
-    
-    String esito = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
-    print: i"Esito finale della Quest: ${esito} al round ${round - 1}";
 }
+
+```
+
+```
 
 ```

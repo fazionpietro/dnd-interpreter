@@ -1,73 +1,82 @@
+def Int getModifier(Int score) {
+    return (score - 10) / 2;
+}
+
+def Int calcDamage(Int dieRoll, Int mod, Bool isCrit) {
+    Int base = isCrit ? dieRoll * 2 : dieRoll;
+    return base + mod;
+}
+
 hero: {
     String name = "Garrick";
-    String class = "Paladin";
-    HP hp = 30;
-    AC ac = 15;
-    String rightHandWeapon = "Spada dritta";
-    Int strBonus = 3;
-}
-foe: {
-    // Ora possiamo usare nomi puliti e generici grazie al namespace!
-    String name = "Drago Rosso";
-    HP hp = 40;
-    AC ac = 14;
-}
-quest: {
-    Int round = 1;
-    // Uso foe.name
-    print: i"Inizia la quest contro il ${foe.name}!";
+    Int strength = 16;
     
-    // Uso hero.hp e foe.hp
+    Int strMod = getModifier(strength); 
+    HP hp = 35;
+    AC ac = 16;
+}
+
+foe: {
+    String name = "Goblin Capo";
+    Int strength = 12;
+    Int strMod = getModifier(strength);
+    HP hp = 25;
+    AC ac = 13;
+}
+
+quest: {
+    print: i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---";
+    print: i"Modificatore di Forza Eroe: ${hero.strMod}";
+    print: i"Modificatore di Forza Nemico: ${foe.strMod}";
+
+    Int round = 1;
     while (hero.hp > 0 && foe.hp > 0) {
-        print: i"--- Round ${round} ---";
-        Int roll = random;
-        print: i"risultato lancio: ${roll}";
+        print: i"\n--- ROUND ${round} ---";
         
-        switch (roll) {
+        // --- TURNO DELL'EROE ---
+        Int txc = d20;
+        print: i"${hero.name} lancia per colpire. Dado naturale: ${txc}";
+        
+        switch (txc) {
             case 1: {
-                print: "Fallimento Critico! Manchi clamorosamente il bersaglio.";
+                print: "Fallimento Critico! Ti sbilanci e subisci danni.";
                 hero.hp -= 2;
             }
             case 20: {
-                // Uso hero.rightHandWeapon e foe.name
-                print: i"Successo Critico! la tua ${hero.rightHandWeapon} trafigge il ${foe.name}";
-                foe.hp -= 10;
+                // Sfruttiamo calcDamage passando true per il critico
+                Int dmg = calcDamage(8, hero.strMod, true);
+                foe.hp -= dmg;
+                print: i"SUCCESSO CRITICO! Inflitti ${dmg} danni devastanti. HP Mostro: ${foe.hp}";
             }
             default: {
-                // Uso hero.strBonus e foe.ac
-                if (roll + hero.strBonus >= foe.ac) {
-                    foe.hp -= 5;
-                    print: i"Colpito! Il Drago subisce danni. HP Drago: ${foe.hp}";
+                if (txc + hero.strMod >= foe.ac) {
+                    Int dadoDanno = d8;
+                    // Riutilizzo della funzione per il danno normale (false)
+                    Int dmg = calcDamage(dadoDanno, hero.strMod, false);
+                    foe.hp -= dmg;
+                    print: i"Colpito! Inflitti ${dmg} danni. HP Mostro: ${foe.hp}";
                 } else {
-                    print: "Mancato! Il Drago schiva l'attacco.";
+                    print: "Mancato! L'arma impatta sullo scudo del Goblin.";
                 }
             }
         }
-        
-        // Contrattacco del mostro se è ancora vivo
+
+        // --- TURNO DEL NEMICO ---
         if (foe.hp > 0) {
-            print: i"il ${foe.name} contrattacca!";
-            Int foe_roll = random;
-            // Uso hero.ac
-            if (foe_roll >= hero.ac) {
-                hero.hp -= 4;
-                print: i"Il colpo va a segno, subisci danni! HP Eroe: ${hero.hp}";
+            Int txcFoe = d20;
+            if (txcFoe + foe.strMod >= hero.ac) {
+                Int dadoDannoFoe = d6;
+                Int dmgFoe = calcDamage(dadoDannoFoe, foe.strMod, false);
+                hero.hp -= dmgFoe;
+                print: i"Il ${foe.name} contrattacca e ti colpisce! Subisci ${dmgFoe} danni. HP Eroe: ${hero.hp}";
             } else {
-                print: "Schivato il soffio di fuoco!";
+                print: i"Il ${foe.name} manca il bersaglio.";
             }
         }
-        
+
         round++;
     }
-    
-    // Uso hero.hp
-    String esito = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
-    print: i"Esito finale della Quest: ${esito} al round ${round - 1}";
-    
-    if (hero.hp > 0) {
-        Gold premio = 150.5;
-        print: i"Hai guadagnato ${premio}!";
-    } else {
-        print: "Il tuo corpo riposa nelle caverne del drago...";
-    }
+
+    String finale = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
+    print: i"\nEsito finale della Quest: ${finale} al round ${round - 1}!";
 }

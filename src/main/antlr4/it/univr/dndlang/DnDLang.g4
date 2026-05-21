@@ -3,8 +3,9 @@ options { language = Java; }
 
 
 HERO      : 'hero'      ;
-INVENTORY : 'inventory' ;
 FOE       : 'foe'       ;
+DEF       : 'def'       ;
+RETURN    : 'return'    ;
 QUEST     : 'quest'     ;
 IF        : 'if'        ;
 ELSE      : 'else'      ;
@@ -13,7 +14,14 @@ SWITCH    : 'switch'    ;
 CASE      : 'case'      ;
 DEFAULT   : 'default'   ;
 PRINT     : 'print'     ;
-RANDOM    : 'random'    ;
+
+D20 : 'd20' ;
+D12 : 'd12' ;
+D10 : 'd10' ;
+D8  : 'd8'  ;
+D6  : 'd6'  ;
+D4  : 'd4'  ;
+D3  : 'd3'  ;
 
 TYPE_INT    : 'Int'    ;
 TYPE_FLOAT  : 'Float'  ;
@@ -22,6 +30,7 @@ TYPE_STRING : 'String' ;
 TYPE_HP     : 'HP'     ;
 TYPE_AC     : 'AC'     ;
 TYPE_GOLD   : 'Gold'   ;
+TYPE_VOID   : 'Void'   ;
 
 
 BOOL    : 'true' | 'false' ;
@@ -48,13 +57,21 @@ BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
 
 
 program
-    : heroSection? inventorySection? foeSection? questSection EOF
+    : functionSection? heroSection? foeSection? questSection EOF
     ;
 
-heroSection      : HERO COLON block ;
-inventorySection : INVENTORY COLON block ;
-foeSection       : FOE COLON block ;
-questSection     : QUEST COLON block ;
+heroSection      : HERO COLON block     ;
+foeSection       : FOE COLON block      ;
+questSection     : QUEST COLON block    ;
+functionSection  : functionDecl+        ;
+
+
+functionDecl
+    : DEF (TYPE_INT | TYPE_FLOAT | TYPE_BOOL | TYPE_STRING | TYPE_HP | TYPE_AC | TYPE_GOLD | TYPE_VOID) ID LPAREN paramList? RPAREN block
+    ;
+
+paramList : paramDecl (COMMA paramDecl)* ;
+paramDecl : (TYPE_INT | TYPE_FLOAT | TYPE_BOOL | TYPE_STRING | TYPE_HP | TYPE_AC | TYPE_GOLD) ID ; 
 
 block
     : LBRACE statement* RBRACE
@@ -68,6 +85,7 @@ statement
     | whileStmt
     | switchStmt
     | printStmt
+    | returnStmt
     | block
     ;
 
@@ -82,11 +100,13 @@ switchStmt   : SWITCH LPAREN expr RPAREN LBRACE caseBlock+ defaultBlock? RBRACE 
 caseBlock    : CASE expr COLON block ;
 defaultBlock : DEFAULT COLON block ;
 
-printStmt : PRINT COLON (expr | ISTRING) SEMI ;
+printStmt   : PRINT COLON (expr | ISTRING) SEMI ;
+returnStmt  : RETURN expr? SEMI;
 
 
 expr
-    : LPAREN expr RPAREN                               # ParenExpr
+    : ID LPAREN (expr (COMMA expr)*)? RPAREN           # FunctionCallExpr
+    | LPAREN expr RPAREN                               # ParenExpr
     | ID (PLUS_PLUS | MINUS_MINUS)                     # PostIncExpr
     | (PLUS_PLUS | MINUS_MINUS) ID                     # PreIncExpr
     | (NOT | MINUS) expr                               # UnaryExpr
@@ -97,7 +117,13 @@ expr
     | expr AND expr                                    # AndExpr
     | expr OR expr                                     # OrExpr
     | expr QUESTION expr COLON expr                    # TernaryExpr
-    | RANDOM                                           # RandomExpr
+    | D20                                              # D20Expr
+    | D12                                              # D12Expr
+    | D10                                              # D10Expr
+    | D8                                               # D8Expr
+    | D6                                               # D6Expr
+    | D4                                               # D4Expr
+    | D3                                               # D3Expr
     | INT                                              # IntExpr
     | FLOAT                                            # FloatExpr
     | BOOL                                             # BoolExpr

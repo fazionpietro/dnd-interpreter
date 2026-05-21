@@ -3,21 +3,13 @@ package it.univr.dndlang;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Enviroment {
-
-  private static class VarData {
-    Object value;
-    String type;
-
-    VarData(Object value, String type) {
-      this.value = value;
-      this.type = type;
-    }
-  }
+public class Environment {
 
   private static class Scope {
     final Scope enclosing;
-    final Map<String, VarData> variables = new HashMap<>();
+
+    final Map<String, VariableSymbol> variables = new HashMap<>();
+    final Map<String, FunctionSymbol> functions = new HashMap<>();
 
     Scope(Scope enclosing) {
       this.enclosing = enclosing;
@@ -26,7 +18,7 @@ public class Enviroment {
 
   private Scope current;
 
-  public Enviroment() {
+  public Environment() {
     this.current = new Scope(null);
   }
 
@@ -39,14 +31,34 @@ public class Enviroment {
   }
 
   public void declare(String name, Object value, String type) {
-    this.current.variables.put(name, new VarData(value, type));
+    this.current.variables.put(name, new VariableSymbol(type, value));
+  }
+
+  public void declareFunction(
+      String name, String returnType, DnDLangParser.FunctionDeclContext ctx) {
+    if (this.current.functions.containsKey(name)) {
+      throw new DnDLangError(
+          "Errore: funzione '" + name + "' gia' dichiarata.", ctx.getStart().getLine());
+    }
+    this.current.functions.put(name, new FunctionSymbol(returnType, ctx));
+  }
+
+  public FunctionSymbol lookupFunction(String name, int line) {
+    Scope scope = current;
+    while (scope != null) {
+      if (scope.functions.containsKey(name)) {
+        return scope.functions.get(name);
+      }
+      scope = scope.enclosing;
+    }
+    throw new DnDLangError("Errore runtime: funzione non dichiarata '" + name + "'", line);
   }
 
   public void assign(String name, Object value) {
     Scope scope = this.current;
     while (scope != null) {
       if (scope.variables.containsKey(name)) {
-        scope.variables.get(name).value = value;
+        scope.variables.get(name).setValue(value);
         return;
       }
       scope = scope.enclosing;
@@ -58,7 +70,7 @@ public class Enviroment {
     Scope scope = current;
     while (scope != null) {
       if (scope.variables.containsKey(name)) {
-        return scope.variables.get(name).value;
+        return scope.variables.get(name).getValue();
       }
       scope = scope.enclosing;
     }
@@ -69,7 +81,7 @@ public class Enviroment {
     Scope scope = current;
     while (scope != null) {
       if (scope.variables.containsKey(name)) {
-        return scope.variables.get(name).type;
+        return scope.variables.get(name).getType();
       }
       scope = scope.enclosing;
     }
@@ -93,40 +105,5 @@ public class Enviroment {
 
   public void setFallback(String name, Object value) {
     if (contains(name)) assign(name, value);
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder sb = new StringBuilder();
-    sb.append("Environment State:\n");
-
-    Scope scope = current;
-    int depth = 0;
-
-    // Risaliamo la catena degli scope dal più locale al globale
-    while (scope != null) {
-      sb.append("  Scope Level ").append(depth).append(": ");
-
-      if (scope.variables.isEmpty()) {
-        sb.append("{ vuoto }\n");
-      } else {
-        sb.append("{ ");
-        for (Map.Entry<String, VarData> entry : scope.variables.entrySet()) {
-          sb.append(entry.getKey())
-              .append("[")
-              .append(entry.getValue().type)
-              .append("]: ")
-              .append(entry.getValue().value)
-              .append(", ");
-        }
-        // Rimuove l'ultima virgola e spazio per pulizia visiva
-        sb.setLength(sb.length() - 2);
-        sb.append(" }\n");
-      }
-
-      scope = scope.enclosing; // Passa al padre
-      depth++;
-    }
-    return sb.toString();
   }
 }

@@ -13,7 +13,6 @@ import it.univr.dndlang.DnDLangParser.MulDivExprContext;
 import it.univr.dndlang.DnDLangParser.OrExprContext;
 import it.univr.dndlang.DnDLangParser.ParenExprContext;
 import it.univr.dndlang.DnDLangParser.PreIncExprContext;
-import it.univr.dndlang.DnDLangParser.RandomExprContext;
 import it.univr.dndlang.DnDLangParser.RelationalExprContext;
 import it.univr.dndlang.DnDLangParser.StringExprContext;
 import it.univr.dndlang.DnDLangParser.SwitchStmtContext;
@@ -23,13 +22,13 @@ import it.univr.dndlang.DnDLangParser.WhileStmtContext;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
-  private final Enviroment env = new Enviroment();
+  private final Environment env = new Environment();
   private String currentStructPrefix = "";
 
   @Override
   public Object visitProgram(DnDLangParser.ProgramContext ctx) {
+    if (ctx.functionSection() != null) visit(ctx.functionSection());
     if (ctx.heroSection() != null) visit(ctx.heroSection());
-    if (ctx.inventorySection() != null) visit(ctx.inventorySection());
     if (ctx.foeSection() != null) visit(ctx.foeSection());
     if (ctx.questSection() != null) visit(ctx.questSection());
     return null;
@@ -37,23 +36,18 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   @Override
   public Object visitHeroSection(DnDLangParser.HeroSectionContext ctx) {
-    currentStructPrefix = "hero."; // Accende il prefisso
+    currentStructPrefix = "hero.";
     visitDeclarativeBlock(ctx.block());
-    currentStructPrefix = ""; // Spegne il prefisso
+    currentStructPrefix = "";
     return null;
   }
 
   @Override
   public Object visitFoeSection(DnDLangParser.FoeSectionContext ctx) {
-    currentStructPrefix = "foe."; // Accende il prefisso
+    currentStructPrefix = "foe.";
     visitDeclarativeBlock(ctx.block());
-    currentStructPrefix = ""; // Spegne il prefisso
+    currentStructPrefix = "";
     return null;
-  }
-
-  @Override
-  public Object visitInventorySection(DnDLangParser.InventorySectionContext ctx) {
-    return visitDeclarativeBlock(ctx.block());
   }
 
   @Override
@@ -91,12 +85,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     Object value;
 
     if (ctx.expr() != null) {
-      try {
-        value = visit(ctx.expr());
-      } catch (DnDLangError e) {
-        System.err.println("Errore runtime alla riga " + e.getLine() + ": " + e.getMessage());
-        value = getDefaultValueForType(declaredType, ctx);
-      }
+
+      value = visit(ctx.expr());
+
     } else {
       value = getDefaultValueForType(declaredType, ctx);
     }
@@ -111,29 +102,13 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     String id = ctx.ID().getText();
 
     if (!env.contains(id)) {
-      System.err.println(
-          "Errore runtime alla riga "
-              + ctx.getStart().getLine()
-              + ": impossibile assegnare, variabile non dichiarata '"
-              + id
-              + "'");
-      return null;
+      throw new DnDLangError(
+          "impossibile assegnare, variabile non dichiarata '" + id + "'", ctx.getStart().getLine());
     }
     String declaredType = env.getType(id);
     Object rightValue;
 
-    try {
-      rightValue = visit(ctx.expr());
-    } catch (DnDLangError e) {
-      System.err.println(
-          "Errore runtime alla riga "
-              + e.getLine()
-              + " durante l'assegnamento di '"
-              + id
-              + "': "
-              + e.getMessage());
-      rightValue = getDefaultValueForType(declaredType, ctx);
-    }
+    rightValue = visit(ctx.expr());
 
     Object leftValue = null;
     Object finalValue = null;
@@ -273,20 +248,22 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
   @Override
   public Object visitStringExpr(StringExprContext ctx) {
     String str = ctx.STRING().getText();
-    return str.substring(1, str.length() - 1);
+    String content = str.substring(1, str.length() - 1);
+
+    return content.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"");
   }
 
   @Override
   public Object visitIStringExpr(DnDLangParser.IStringExprContext ctx) {
     String rawString = ctx.ISTRING().getText();
     String content = rawString.substring(2, rawString.length() - 1);
+    content = content.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"");
 
     java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\$\\{([^}]+)\\}");
     java.util.regex.Matcher matcher = pattern.matcher(content);
     StringBuilder result = new StringBuilder();
 
     while (matcher.find()) {
-      // Estraiamo l'espressione (es. "hp" oppure "round - 1")
       String exprText = matcher.group(1).trim();
       String replacement;
 
@@ -332,9 +309,38 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
   }
 
   @Override
-  public Object visitRandomExpr(RandomExprContext ctx) {
-    System.out.println("Lancio un d20 in corso...");
-    return new java.util.Random().nextInt(20) + 1;
+  public Object visitD20Expr(DnDLangParser.D20ExprContext ctx) {
+    return rollDice(20);
+  }
+
+  @Override
+  public Object visitD12Expr(DnDLangParser.D12ExprContext ctx) {
+    return rollDice(12);
+  }
+
+  @Override
+  public Object visitD10Expr(DnDLangParser.D10ExprContext ctx) {
+    return rollDice(10);
+  }
+
+  @Override
+  public Object visitD8Expr(DnDLangParser.D8ExprContext ctx) {
+    return rollDice(8);
+  }
+
+  @Override
+  public Object visitD6Expr(DnDLangParser.D6ExprContext ctx) {
+    return rollDice(6);
+  }
+
+  @Override
+  public Object visitD4Expr(DnDLangParser.D4ExprContext ctx) {
+    return rollDice(4);
+  }
+
+  @Override
+  public Object visitD3Expr(DnDLangParser.D3ExprContext ctx) {
+    return rollDice(3);
   }
 
   @Override
@@ -433,6 +439,79 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
   }
 
   @Override
+  public Object visitFunctionCallExpr(DnDLangParser.FunctionCallExprContext ctx) {
+    String funcName = ctx.ID().getText();
+    int line = ctx.getStart().getLine();
+
+    FunctionSymbol function = env.lookupFunction(funcName, line);
+    DnDLangParser.FunctionDeclContext delCtx = function.getDeclarationNode();
+
+    java.util.ArrayList<Object> evalArguments = new java.util.ArrayList<>();
+    if (ctx.expr() != null) {
+      for (DnDLangParser.ExprContext argCtx : ctx.expr()) {
+        evalArguments.add(visit(argCtx));
+      }
+    }
+
+    DnDLangParser.ParamListContext paramListCtx = delCtx.paramList();
+    java.util.List<DnDLangParser.ParamDeclContext> formalParameter = new java.util.ArrayList<>();
+    if (paramListCtx != null) {
+      formalParameter = paramListCtx.paramDecl();
+    }
+
+    if (evalArguments.size() != formalParameter.size()) {
+      throw new DnDLangError(
+          "Errore: la funzione '"
+              + funcName
+              + "' si aspetta "
+              + formalParameter.size()
+              + " parametri, ma ne sono stati passati "
+              + evalArguments.size()
+              + ".",
+          line);
+    }
+
+    env.enterBlock();
+
+    try {
+      for (int i = 0; i < formalParameter.size(); i++) {
+        DnDLangParser.ParamDeclContext paramCtx = formalParameter.get(i);
+        String paramType = paramCtx.getChild(0).getText();
+        String paramName = paramCtx.ID().getText();
+
+        Object argValue = evalArguments.get(i);
+        Object coercedValue;
+
+        try {
+          coercedValue = coerceToDeclaredType(argValue, paramType);
+        } catch (Exception e) {
+          throw new DnDLangError(
+              "Errore di tipo per il parametro '"
+                  + paramName
+                  + "'. "
+                  + "Atteso: "
+                  + paramType
+                  + ", Ricevuto: valore incompatibile.",
+              line);
+        }
+
+        env.declare(paramName, coercedValue, paramType);
+      }
+
+      visit(delCtx.block());
+
+      return null;
+
+    } catch (ReturnException e) {
+
+      return e.getValue();
+
+    } finally {
+      env.exitBlock();
+    }
+  }
+
+  @Override
   public Object visitExprStmt(ExprStmtContext ctx) {
     visit(ctx.expr());
     return null;
@@ -480,6 +559,28 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       return -num;
     }
     throw new DnDLangError("Operatore unario non riconosciuto", ctx.getStart().getLine());
+  }
+
+  @Override
+  public Object visitReturnStmt(DnDLangParser.ReturnStmtContext ctx) {
+    Object value = null;
+    String type = "Void";
+
+    if (ctx.expr() != null) {
+      value = visit(ctx.expr());
+    }
+
+    throw new ReturnException(value, type);
+  }
+
+  @Override
+  public Object visitFunctionDecl(DnDLangParser.FunctionDeclContext ctx) {
+    String name = ctx.ID().getText();
+
+    String returnType = ctx.getChild(1).getText();
+
+    env.declareFunction(name, returnType, ctx);
+    return null;
   }
 
   @Override
@@ -561,8 +662,27 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     }
     if (("HP".equals(declaredType) || "AC".equals(declaredType) || "Int".equals(declaredType))
         && value instanceof Double d) {
-      return (int) d.doubleValue(); // troncamento esplicito
+      return (int) d.doubleValue();
     }
+
+    boolean typeMatch =
+        switch (declaredType) {
+          case "Int", "HP", "AC" -> value instanceof Integer;
+          case "Float", "Gold" -> value instanceof Double;
+          case "Bool" -> value instanceof Boolean;
+          case "String" -> value instanceof String;
+          case "Void" -> value == null;
+          default -> false;
+        };
+    if (!typeMatch) {
+
+      throw new IllegalArgumentException(
+          "Tipo incompatibile: atteso "
+              + declaredType
+              + ", ricevuto "
+              + value.getClass().getSimpleName());
+    }
+
     return value;
   }
 
@@ -585,5 +705,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   private boolean areBothIntegers(Object left, Object right) {
     return left instanceof Integer && right instanceof Integer;
+  }
+
+  private int rollDice(int sides) {
+    return new java.util.Random().nextInt(sides) + 1;
   }
 }

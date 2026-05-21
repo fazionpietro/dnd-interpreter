@@ -1,10 +1,11 @@
 hero: {
     String name = "Aelar";
-    String class= "Monk";
-    HP hp       = 24;
-    AC ac       = 15;
+    String class = "Monk";
+    HP hp = 24;
+    AC ac = 15;
+    Gold gold = 50.0;
 }
-inventory: { Gold gold = 50.0; }
+
 quest: {
     print: i"Eroe: ${hero.name} | Class: ${hero.class} | HP: ${hero.hp} | AC: ${hero.ac} | Gold: ${hero.gold}";
 }
