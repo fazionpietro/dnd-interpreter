@@ -24,7 +24,7 @@ Il linguaggio è stato progettato soddisfacendo i requisiti di base e implementa
 - **Funzioni (Funzionalità Avanzata - Livello 2)**: Supporto per la dichiarazione di funzioni con parametri passati per valore, tipi di ritorno, scoping isolato (record di attivazione) e supporto completo alla **ricorsione**.
 - **Flusso di Controllo Condizionato (Funzionalità Avanzata - Livello 2)**: Implementazione del costrutto `switch-case` con blocco `default` opzionale.
 - **Zucchero Sintattico (Funzionalità Avanzata - Livello 1)**: Assegnamenti composti (`+=`, `-=`, `*=`, `/=`), operatori di pre/post incremento (`++`, `--`), operatore ternario (`cond ? vero : falso`) e stringhe interpolate con valutazione eager (`i"Danno: ${d8 + mod}"`).
-- **Meccaniche RPG native**: Addio alle generazioni casuali astratte. Il linguaggio integra i dadi poliedrici ufficiali (`d20`, `d12`, `d10`, `d8`, `d6`, `d4`, `d3`) come espressioni native.
+- **Meccaniche RPG native**: Il linguaggio integra i dadi poliedrici ufficiali (`d20`, `d12`, `d10`, `d8`, `d6`, `d4`, `d3`) come espressioni native oltre che le meccaninche di tiro con vantaggio, svantaggio, contrapposto e salvezza
 - **Namespace Autogenerati**: Struttura a blocchi semantici (`hero`, `foe`, `quest`) che organizza automaticamente le variabili qualificandole (es. `hero.hp`).
 
 ---
@@ -104,6 +104,8 @@ Il linguaggio è staticamente tipizzato e supporta tipi generici e di dominio:
 
 **Dadi Nativi:**
 I token `d20`, `d12`, `d10`, `d8`, `d6`, `d4` e `d3` sono trattati dal lexer come vere e proprie espressioni. Scrivere `Int danno = 2 * d6 + 4;` ordina all'interprete di simulare dinamicamente il lancio.
+inoltre utilizzando `adv`, `dis`, `vs`, `save` si possono simulare i tiri speciali come i tiri con vantaggio/svantaggio,
+i tiri contrapposti e i tiri salvezza, come per esempio `adv d20`, `d20 save 15`.
 
 ---
 

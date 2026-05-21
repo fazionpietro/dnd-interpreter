@@ -11,7 +11,8 @@ Developed as a university laboratory project for the Programming Languages cours
 ## Key Features
 
 - **Advanced Functions & Recursion (Advanced Feature):** Full support for function declarations, call-by-value parameters, return types, isolated lexical scoping (activation records), and recursive calls.
-- **Native Polyhedral Dice:** Say goodbye to generic `random` methods. Natively roll dice using built-in tokens like `d20`, `d12`, `d10`, `d8`, `d6`, `d4`, and `d3` right inside your mathematical expressions.
+- **Native Polyhedral Dice:** Say goodbye to generic `random` methods. Natively roll dice using built-in tokens like `d20`, `d12`, `d10`, `d8`, `d6`, `d4`, and `d3` right inside your mathematical expressions. In addition you can use the built in operators
+  `adv`, `dis`, `vs`, `save` to simulate contested checks.
 - **RPG Domain Types:** Built-in static typing for `HP` (Health Points), `AC` (Armor Class), and `Gold`, alongside standard types (`Int`, `Float`, `String`, `Bool`) with implicit safe coercion.
 - **Semantic Blocks & Namespaces:** Code is organized into logical entities (`hero`, `foe`, `quest`). Variables declared inside entities automatically get their own namespace (e.g., `hero.hp`, `foe.name`).
 - **Fail-Fast Error Handling:** Strict runtime validation. Errors like division by zero, type mismatches, parameter count violations, or undeclared variables trigger a custom `DnDLangError` that immediately halts execution, pointing to the exact line of the failure.
@@ -36,17 +37,22 @@ Developed as a university laboratory project for the Programming Languages cours
 
 2.  **Compile the project:**
     This command will automatically trigger ANTLR4 to generate the Lexer and Parser from the `DnDLang.g4` grammar, and then compile the Java source code.
-    ```bash
+
+    ````bash
     mvn clean compile
 
         ```
 
+    ````
+
 3.  **Run a program:**
     Execute the interpreter by passing the path to a `.dnd` script.
-    ```bash
+
+    ````bash
     mvn exec:java -Dexec.mainClass="it.univr.dndlang.Main" -Dexec.args="programs/quest.dnd"
 
         ```
+    ````
 
 ## Language Syntax Overview
 

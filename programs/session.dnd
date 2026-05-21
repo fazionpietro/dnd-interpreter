@@ -4,8 +4,8 @@ Ad ogni attacco consecutivo a segno, la penalità al TxC aumenta di 2.
 Restituisce la somma TOTALE dei danni inflitti in quell'unica catena di colpi.
 */
 def Int furiaBerserker(Int bonusTxC, Int classeArmatura) {
-    Int lancio = d20;
-    Int txc = lancio + bonusTxC;
+    
+    Int txc = d20 + bonusTxC;
     
     if (txc >= classeArmatura) {
         Int danno = d8; 

@@ -15,13 +15,18 @@ CASE      : 'case'      ;
 DEFAULT   : 'default'   ;
 PRINT     : 'print'     ;
 
-D20 : 'd20' ;
-D12 : 'd12' ;
-D10 : 'd10' ;
-D8  : 'd8'  ;
-D6  : 'd6'  ;
-D4  : 'd4'  ;
-D3  : 'd3'  ;
+ADV  : 'adv' ;
+DIS  : 'dis' ;
+SAVE : 'save';
+VS   : 'vs'  ;
+D20  : 'd20' ;
+D12  : 'd12' ;
+D10  : 'd10' ;
+D8   : 'd8'  ;
+D6   : 'd6'  ;
+D4   : 'd4'  ;
+D3   : 'd3'  ;
+
 
 TYPE_INT    : 'Int'    ;
 TYPE_FLOAT  : 'Float'  ;
@@ -103,16 +108,19 @@ defaultBlock : DEFAULT COLON block ;
 printStmt   : PRINT COLON (expr | ISTRING) SEMI ;
 returnStmt  : RETURN expr? SEMI;
 
+diceOnly   : D20 | D12 | D10 | D8 | D6 | D4 | D3;
 
 expr
     : ID LPAREN (expr (COMMA expr)*)? RPAREN           # FunctionCallExpr
     | LPAREN expr RPAREN                               # ParenExpr
+    | (ADV | DIS) diceOnly                             # DiceAdvDisExpr
     | ID (PLUS_PLUS | MINUS_MINUS)                     # PostIncExpr
     | (PLUS_PLUS | MINUS_MINUS) ID                     # PreIncExpr
     | (NOT | MINUS) expr                               # UnaryExpr
     | expr (STAR | SLASH | PERCENT) expr               # MulDivExpr
     | expr (PLUS | MINUS) expr                         # AddSubExpr
     | expr (LT | GT | LE | GE) expr                    # RelationalExpr
+    | expr (SAVE | VS) expr                            # SaveVsExpr
     | expr (EQ | NEQ) expr                             # EqualityExpr
     | expr AND expr                                    # AndExpr
     | expr OR expr                                     # OrExpr

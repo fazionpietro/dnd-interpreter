@@ -3,6 +3,8 @@ package it.univr.dndlang;
 import it.univr.dndlang.DnDLangParser.AddSubExprContext;
 import it.univr.dndlang.DnDLangParser.AndExprContext;
 import it.univr.dndlang.DnDLangParser.BoolExprContext;
+import it.univr.dndlang.DnDLangParser.DiceAdvDisExprContext;
+import it.univr.dndlang.DnDLangParser.DiceOnlyContext;
 import it.univr.dndlang.DnDLangParser.EqualityExprContext;
 import it.univr.dndlang.DnDLangParser.ExprStmtContext;
 import it.univr.dndlang.DnDLangParser.FloatExprContext;
@@ -14,6 +16,7 @@ import it.univr.dndlang.DnDLangParser.OrExprContext;
 import it.univr.dndlang.DnDLangParser.ParenExprContext;
 import it.univr.dndlang.DnDLangParser.PreIncExprContext;
 import it.univr.dndlang.DnDLangParser.RelationalExprContext;
+import it.univr.dndlang.DnDLangParser.SaveVsExprContext;
 import it.univr.dndlang.DnDLangParser.StringExprContext;
 import it.univr.dndlang.DnDLangParser.SwitchStmtContext;
 import it.univr.dndlang.DnDLangParser.TernaryExprContext;
@@ -344,6 +347,56 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
   }
 
   @Override
+  public Object visitDiceAdvDisExpr(DiceAdvDisExprContext ctx) {
+
+    int r1 = (int) visit(ctx.diceOnly());
+    int r2 = (int) visit(ctx.diceOnly());
+
+    boolean isAdv = ctx.ADV() != null;
+
+    int res = isAdv ? Math.max(r1, r2) : Math.min(r1, r2);
+
+    String tipo = isAdv ? "Vantaggio" : "Svantaggio";
+    System.out.println(" > [" + tipo + "] Lanciati " + r1 + " e " + r2 + " -> Tengo " + res);
+
+    return res;
+  }
+
+  @Override
+  public Object visitSaveVsExpr(SaveVsExprContext ctx) {
+    Object left = visit(ctx.expr(0));
+    Object right = visit(ctx.expr(1));
+    double l = asDouble(left, ctx);
+    double r = asDouble(right, ctx);
+
+    boolean success;
+
+    if (ctx.SAVE() != null) {
+      success = l >= r;
+      System.out.println(
+          "  > [ Tiro Salvezza ] Totale: "
+              + (int) l
+              + " vs CD: "
+              + (int) r
+              + " -> "
+              + (success ? "SUCCESSO" : "FALLIMENTO"));
+      return success;
+    } else if (ctx.VS() != null) {
+      success = l > r;
+      System.out.println(
+          "  > [ Prova Contrapposta ] Attivo: "
+              + (int) l
+              + " vs Avversario: "
+              + (int) r
+              + " -> "
+              + (success ? "VITTORIA" : "SCONFITTA"));
+      return success;
+    } else {
+      throw new DnDLangError("", ctx.getStart().getLine());
+    }
+  }
+
+  @Override
   public Object visitIdExpr(IdExprContext ctx) {
     String id = ctx.ID().getText();
     if (!env.contains(id)) {
@@ -515,6 +568,18 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
   public Object visitExprStmt(ExprStmtContext ctx) {
     visit(ctx.expr());
     return null;
+  }
+
+  @Override
+  public Object visitDiceOnly(DiceOnlyContext ctx) {
+    if (ctx.D20() != null) return rollDice(20);
+    if (ctx.D12() != null) return rollDice(12);
+    if (ctx.D10() != null) return rollDice(10);
+    if (ctx.D8() != null) return rollDice(8);
+    if (ctx.D6() != null) return rollDice(6);
+    if (ctx.D4() != null) return rollDice(4);
+    if (ctx.D3() != null) return rollDice(3);
+    throw new DnDLangError("Dado non riconosciuto", ctx.getStart().getLine());
   }
 
   @Override
