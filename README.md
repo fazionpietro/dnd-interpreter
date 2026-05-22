@@ -40,9 +40,6 @@ Developed as a university laboratory project for the Programming Languages cours
 
     ````bash
     mvn clean compile
-
-        ```
-
     ````
 
 3.  **Run a program:**
@@ -50,8 +47,6 @@ Developed as a university laboratory project for the Programming Languages cours
 
     ````bash
     mvn exec:java -Dexec.mainClass="it.univr.dndlang.Main" -Dexec.args="programs/quest.dnd"
-
-        ```
     ````
 
 ## Language Syntax Overview
