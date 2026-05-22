@@ -9,12 +9,12 @@ def Int furiaBerserker(Int bonusTxC, Int classeArmatura) {
     
     if (txc >= classeArmatura) {
         Int danno = d8; 
-        print: i" > Colpo a segno! (TxC: ${txc}). Inflitti ${danno} danni.";
+        print(i" > Colpo a segno! (TxC: ${txc}). Inflitti ${danno} danni.");
         
         
         return danno + furiaBerserker(bonusTxC - 2, classeArmatura);
     } else {
-        print: i" > La catena si spezza. L'attacco fallisce (TxC: ${txc}).";
+        print(i" > La catena si spezza. L'attacco fallisce (TxC: ${txc}).");
         return 0; 
     }
 }
@@ -33,45 +33,45 @@ foe: {
 }
 
 quest: {
-    print: i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---";
+    print(i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---");
     Int round = 1;
 
     while (hero.hp > 0 && foe.hp > 0) {
-        print: i"\n--- ROUND ${round} ---";
+        print(i"\n--- ROUND ${round} ---");
         
-        print: i"${hero.name} entra in Ira e scatena la Furia Berserker!";
+        print(i"${hero.name} entra in Ira e scatena la Furia Berserker!");
         
         Int danniTotali = furiaBerserker(hero.strMod, foe.ac);
         
         if (danniTotali > 0) {
             foe.hp -= danniTotali;
-            print: i"Risultato: La Furia ha inflitto un totale di ${danniTotali} danni in questo turno! HP Golem: ${foe.hp}";
+            print(i"Risultato: La Furia ha inflitto un totale di ${danniTotali} danni in questo turno! HP Golem: ${foe.hp}");
         } else {
-            print: "Risultato: Tordek manca clamorosamente il primo colpo.";
+            print("Risultato: Tordek manca clamorosamente il primo colpo.");
         }
 
         
         if (foe.hp > 0) {
-            print: i"Il ${foe.name} contrattacca con uno schianto possente!";
+            print(i"Il ${foe.name} contrattacca con uno schianto possente!");
             Int txcFoe = d20 + 4;
             
             if (txcFoe >= hero.ac) {
                 Int dannoNemico = d10 + 5;
                 hero.hp -= dannoNemico;
-                print: i"Colpito! ${hero.name} subisce ${dannoNemico} danni. HP Eroe: ${hero.hp}";
+                print(i"Colpito! ${hero.name} subisce ${dannoNemico} danni. HP Eroe: ${hero.hp}");
             } else {
-                print: "L'eroe schiva il colpo!";
+                print("L'eroe schiva il colpo!");
             }
         }
         
         round++;
     }
 
-    print: "----------------------------------------------------------------------";
+    print("----------------------------------------------------------------------");
     if (hero.hp > 0) {
         Gold tesoro = 500.0;
-        print: i"Il Golem crolla a terra. Vittoria! Guadagni ${tesoro} gp.";
+        print(i"Il Golem crolla a terra. Vittoria! Guadagni ${tesoro} gp.");
     } else {
-        print: "La resistenza del Golem era troppa. Tordek cade in battaglia.";
+        print("La resistenza del Golem era troppa. Tordek cade in battaglia.");
     }
 }

@@ -7,8 +7,8 @@ quest: {
     Int x = 10;
     Int y = 0;
     
-    print: "Tentativo di divisione per zero... L'interprete deve bloccarsi immediatamente!";
+    print("Tentativo di divisione per zero... L'interprete deve bloccarsi immediatamente!");
     Int z = x / y;
     
-    print: "Se vedi questa scritta, il Fail-Fast NON sta funzionando!";
+    print("Se vedi questa scritta, il Fail-Fast NON sta funzionando!");
 }

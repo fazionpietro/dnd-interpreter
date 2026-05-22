@@ -13,6 +13,7 @@ WHILE     : 'while'     ;
 SWITCH    : 'switch'    ;
 CASE      : 'case'      ;
 DEFAULT   : 'default'   ;
+BREAK     : 'break'     ;
 PRINT     : 'print'     ;
 
 ADV  : 'adv' ;
@@ -91,10 +92,12 @@ statement
     | switchStmt
     | printStmt
     | returnStmt
+    | breakStmt
     | block
     ;
 
-exprStmt : expr SEMI ;
+breakStmt  : BREAK SEMI;
+exprStmt  : expr SEMI ;
 decl   : (TYPE_INT | TYPE_FLOAT | TYPE_BOOL | TYPE_STRING | TYPE_HP | TYPE_AC | TYPE_GOLD) ID ASSIGN expr SEMI ;
 assign : ID (ASSIGN | PLUS_ASSIGN  | MINUS_ASSIGN |  STAR_ASSIGN | SLASH_ASSIGN) expr SEMI ;
 
@@ -105,7 +108,7 @@ switchStmt   : SWITCH LPAREN expr RPAREN LBRACE caseBlock+ defaultBlock? RBRACE 
 caseBlock    : CASE expr COLON block ;
 defaultBlock : DEFAULT COLON block ;
 
-printStmt   : PRINT COLON (expr | ISTRING) SEMI ;
+printStmt   : PRINT LPAREN (expr | ISTRING) RPAREN SEMI ;
 returnStmt  : RETURN expr? SEMI;
 
 diceOnly   : D20 | D12 | D10 | D8 | D6 | D4 | D3;

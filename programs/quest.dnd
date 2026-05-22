@@ -25,28 +25,28 @@ foe: {
 }
 
 quest: {
-    print: i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---";
-    print: i"Modificatore di Forza Eroe: ${hero.strMod}";
-    print: i"Modificatore di Forza Nemico: ${foe.strMod}";
+    print(i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---");
+    print(i"Modificatore di Forza Eroe: ${hero.strMod}");
+    print(i"Modificatore di Forza Nemico: ${foe.strMod}");
 
     Int round = 1;
     while (hero.hp > 0 && foe.hp > 0) {
-        print: i"\n--- ROUND ${round} ---";
+        print(i"\n--- ROUND ${round} ---");
         
         // --- TURNO DELL'EROE ---
         Int txc = d20;
-        print: i"${hero.name} lancia per colpire. Dado naturale: ${txc}";
+        print(i"${hero.name} lancia per colpire. Dado naturale: ${txc}");
         
         switch (txc) {
             case 1: {
-                print: "Fallimento Critico! Ti sbilanci e subisci danni.";
+                print("Fallimento Critico! Ti sbilanci e subisci danni.");
                 hero.hp -= 2;
             }
             case 20: {
                 // Sfruttiamo calcDamage passando true per il critico
                 Int dmg = calcDamage(8, hero.strMod, true);
                 foe.hp -= dmg;
-                print: i"SUCCESSO CRITICO! Inflitti ${dmg} danni devastanti. HP Mostro: ${foe.hp}";
+                print(i"SUCCESSO CRITICO! Inflitti ${dmg} danni devastanti. HP Mostro: ${foe.hp}");
             }
             default: {
                 if (txc + hero.strMod >= foe.ac) {
@@ -54,9 +54,9 @@ quest: {
                     // Riutilizzo della funzione per il danno normale (false)
                     Int dmg = calcDamage(dadoDanno, hero.strMod, false);
                     foe.hp -= dmg;
-                    print: i"Colpito! Inflitti ${dmg} danni. HP Mostro: ${foe.hp}";
+                    print(i"Colpito! Inflitti ${dmg} danni. HP Mostro: ${foe.hp}");
                 } else {
-                    print: "Mancato! L'arma impatta sullo scudo del Goblin.";
+                    print("Mancato! L'arma impatta sullo scudo del Goblin.");
                 }
             }
         }
@@ -68,9 +68,9 @@ quest: {
                 Int dadoDannoFoe = d6;
                 Int dmgFoe = calcDamage(dadoDannoFoe, foe.strMod, false);
                 hero.hp -= dmgFoe;
-                print: i"Il ${foe.name} contrattacca e ti colpisce! Subisci ${dmgFoe} danni. HP Eroe: ${hero.hp}";
+                print(i"Il ${foe.name} contrattacca e ti colpisce! Subisci ${dmgFoe} danni. HP Eroe: ${hero.hp}");
             } else {
-                print: i"Il ${foe.name} manca il bersaglio.";
+                print(i"Il ${foe.name} manca il bersaglio.");
             }
         }
 
@@ -78,5 +78,5 @@ quest: {
     }
 
     String finale = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
-    print: i"\nEsito finale della Quest: ${finale} al round ${round - 1}!";
+    print(i"\nEsito finale della Quest: ${finale} al round ${round - 1}!");
 }

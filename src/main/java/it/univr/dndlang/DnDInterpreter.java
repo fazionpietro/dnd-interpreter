@@ -3,6 +3,7 @@ package it.univr.dndlang;
 import it.univr.dndlang.DnDLangParser.AddSubExprContext;
 import it.univr.dndlang.DnDLangParser.AndExprContext;
 import it.univr.dndlang.DnDLangParser.BoolExprContext;
+import it.univr.dndlang.DnDLangParser.BreakStmtContext;
 import it.univr.dndlang.DnDLangParser.DiceAdvDisExprContext;
 import it.univr.dndlang.DnDLangParser.DiceOnlyContext;
 import it.univr.dndlang.DnDLangParser.EqualityExprContext;
@@ -27,6 +28,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
   private final Environment env = new Environment();
   private String currentStructPrefix = "";
+  private boolean isBreaking = false;
 
   @Override
   public Object visitProgram(DnDLangParser.ProgramContext ctx) {
@@ -64,6 +66,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     if (ctx.statement() != null) {
       for (var stmt : ctx.statement()) {
         visit(stmt);
+        if (isBreaking) {
+          break;
+        }
       }
     }
     env.exitBlock();
@@ -102,7 +107,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   @Override
   public Object visitAssign(DnDLangParser.AssignContext ctx) {
-    String id = ctx.ID().getText();
+    String rawId = ctx.ID().getText();
+    String id = resolveId(rawId, ctx.getStart().getLine());
 
     if (!env.contains(id)) {
       throw new DnDLangError(
@@ -161,7 +167,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   @Override
   public Object visitPostIncExpr(DnDLangParser.PostIncExprContext ctx) {
-    String id = ctx.ID().getText();
+    String rawId = ctx.ID().getText();
+    String id = resolveId(rawId, ctx.getStart().getLine());
     String declaredType = env.getType(id);
 
     Object oldValue = env.lookup(id);
@@ -186,7 +193,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   @Override
   public Object visitPreIncExpr(PreIncExprContext ctx) {
-    String id = ctx.ID().getText();
+    String rawId = ctx.ID().getText();
+    String id = resolveId(rawId, ctx.getStart().getLine());
     String declaredType = env.getType(id);
 
     Object oldValue = env.lookup(id);
@@ -287,8 +295,15 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
         } else {
           Object val = visit(exprCtx);
 
-          if (env.contains(exprText)) {
-            String type = env.getType(exprText);
+          String resolvedIdForType = null;
+          if (!currentStructPrefix.isEmpty() && env.contains(currentStructPrefix + exprText)) {
+            resolvedIdForType = currentStructPrefix + exprText;
+          } else if (env.contains(exprText)) {
+            resolvedIdForType = exprText;
+          }
+
+          if (resolvedIdForType != null) {
+            String type = env.getType(resolvedIdForType);
             replacement =
                 switch (type) {
                   case "HP" -> val + " HP";
@@ -398,10 +413,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   @Override
   public Object visitIdExpr(IdExprContext ctx) {
-    String id = ctx.ID().getText();
-    if (!env.contains(id)) {
-      throw new DnDLangError("variabile non dichiarata '" + id + "'", ctx.getStart().getLine());
-    }
+    String rawId = ctx.ID().getText();
+    String id = resolveId(rawId, ctx.getStart().getLine());
     return env.lookup(id);
   }
 
@@ -680,6 +693,11 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       }
 
       visit(ctx.block());
+
+      if (isBreaking) {
+        isBreaking = false;
+        break;
+      }
     }
     return null;
   }
@@ -700,12 +718,20 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
       if (isMatch) {
         visit(caseCtx.block());
+        isBreaking = false;
         return null;
       }
     }
     if (ctx.defaultBlock() != null) {
       visit(ctx.defaultBlock().block());
+      isBreaking = false;
     }
+    return null;
+  }
+
+  @Override
+  public Object visitBreakStmt(BreakStmtContext ctx) {
+    isBreaking = true;
     return null;
   }
 
@@ -774,5 +800,20 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   private int rollDice(int sides) {
     return new java.util.Random().nextInt(sides) + 1;
+  }
+
+  private String resolveId(String rawId, int line) {
+    if (!currentStructPrefix.isEmpty()) {
+      String prefixedId = currentStructPrefix + rawId;
+      if (env.contains(prefixedId)) {
+        return prefixedId;
+      }
+    }
+
+    if (env.contains(rawId)) {
+      return rawId;
+    }
+
+    throw new DnDLangError("variabile non dichiarata '" + rawId + "'", line);
   }
 }
