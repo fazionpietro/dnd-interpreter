@@ -29,6 +29,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
   private final Environment env = new Environment();
   private String currentStructPrefix = "";
   private boolean isBreaking = false;
+  private String currentReturnType = "Void";
 
   @Override
   public Object visitProgram(DnDLangParser.ProgramContext ctx) {
@@ -537,6 +538,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
           line);
     }
 
+    String previousReturnType = currentReturnType;
+    currentReturnType = function.getType();
+
     env.enterBlock();
 
     try {
@@ -566,14 +570,43 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
       visit(delCtx.block());
 
+      if (!"Void".equals(currentReturnType)) {
+        throw new DnDLangError(
+            "La funzione '"
+                + funcName
+                + "' deve restituire un valore di tipo "
+                + currentReturnType
+                + " ma non ha un'istruzione return.",
+            line);
+      }
       return null;
 
     } catch (ReturnException e) {
+      Object retVal = e.getValue();
 
-      return e.getValue();
+      if ("Void".equals(currentReturnType)) {
+        if (retVal != null) {
+          throw new DnDLangError(
+              "La funzione '" + funcName + "' è Void e non può restituire un valore.", line);
+        }
+        return null;
+      }
+
+      try {
+        return coerceToDeclaredType(retVal, currentReturnType);
+      } catch (IllegalArgumentException ex) {
+        throw new DnDLangError(
+            "La funzione '"
+                + funcName
+                + "' deve restituire "
+                + currentReturnType
+                + " ma ha restituito un tipo incompatibile.",
+            line);
+      }
 
     } finally {
       env.exitBlock();
+      currentReturnType = previousReturnType;
     }
   }
 
@@ -641,14 +674,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
   @Override
   public Object visitReturnStmt(DnDLangParser.ReturnStmtContext ctx) {
-    Object value = null;
-    String type = "Void";
-
-    if (ctx.expr() != null) {
-      value = visit(ctx.expr());
-    }
-
-    throw new ReturnException(value, type);
+    Object value = (ctx.expr() != null) ? visit(ctx.expr()) : null;
+    throw new ReturnException(value, currentReturnType); // usa il tipo corrente
   }
 
   @Override
@@ -781,6 +808,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     if (ctx.statement() != null) {
       for (var stmt : ctx.statement()) {
         visit(stmt);
+        if (isBreaking) {
+          throw new DnDLangError("'break' usato fuori da un ciclo", stmt.getStart().getLine());
+        }
       }
     }
     return null;

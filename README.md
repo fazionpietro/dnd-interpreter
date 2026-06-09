@@ -38,21 +38,17 @@ Developed as a university laboratory project for the Programming Languages cours
 2.  **Compile the project:**
     This command will automatically trigger ANTLR4 to generate the Lexer and Parser from the `DnDLang.g4` grammar, and then compile the Java source code.
 
-    ````bash
+    ```bash
     mvn clean compile
 
-        ```
-
-    ````
+    ```
 
 3.  **Run a program:**
     Execute the interpreter by passing the path to a `.dnd` script.
 
-    ````bash
+    ```bash
     mvn exec:java -Dexec.mainClass="it.univr.dndlang.Main" -Dexec.args="programs/quest.dnd"
-
-        ```
-    ````
+    ```
 
 ## Language Syntax Overview
 
@@ -61,54 +57,89 @@ A standard DnDLang program consists of an optional declarative section for funct
 ### Quick Example
 
 ```dnd
-// 1. Declarative Section (Functions)
-def Int calculateHit(Int roll, Int modifier) {
-    return roll + modifier;
+def Int getModifier(Int score) {
+    return (score - 10) / 2;
 }
 
-// 2. Entity Configuration
+def Int calcDamage(Int dieRoll, Int mod, Bool isCrit) {
+    Int base = isCrit ? dieRoll * 2 : dieRoll;
+    return base + mod;
+}
+
 hero: {
-    String name = "Aelar";
-    HP hp = 30;
-    AC ac = 15;
-    Int strBonus = 3;
+    String name = "Garrick";
+    Int strength = 16;
+
+    Int strMod = getModifier(strength);
+    HP hp = 35;
+    AC ac = 16;
 }
 
 foe: {
-    String name = "Red Dragon";
-    HP hp = 40;
-    AC ac = 14;
+    String name = "Goblin Capo";
+    Int strength = 12;
+    Int strMod = getModifier(strength);
+    HP hp = 25;
+    AC ac = 13;
 }
 
-// 3. Execution Logic
 quest: {
+    print(i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---");
+    print(i"Modificatore di Forza Eroe: ${hero.strMod}");
+    print(i"Modificatore di Forza Nemico: ${foe.strMod}");
+
     Int round = 1;
-    print: i"The quest against the ${foe.name} begins!";
-
     while (hero.hp > 0 && foe.hp > 0) {
-        // Native d20 roll evaluated eager-style as an argument
-        Int attackRoll = calculateHit(d20, hero.strBonus);
+        print(i"\n--- ROUND ${round} ---");
 
-        if (attackRoll >= foe.ac) {
-            Int damage = d8 + 2; // Native d8 roll
-            foe.hp -= damage;
-            print: i"Hit! Dragon takes ${damage} damage. HP: ${foe.hp}";
-        } else {
-            print: "Miss!";
-        }
+        // --- TURNO DELL'EROE ---
+        Int txc = d20;
+        print(i"${hero.name} lancia per colpire. Dado naturale: ${txc}");
 
-        // Foe counterattacks if still alive
-        if (foe.hp > 0) {
-            if (d20 >= hero.ac) {
-                hero.hp -= 4;
+        switch (txc) {
+            case 1: {
+                print("Fallimento Critico! Ti sbilanci e subisci danni.");
+                hero.hp -= 2;
+            }
+            case 20: {
+                // Sfruttiamo calcDamage passando true per il critico
+                Int dmg = calcDamage(8, hero.strMod, true);
+                foe.hp -= dmg;
+                print(i"SUCCESSO CRITICO! Inflitti ${dmg} danni devastanti. HP Mostro: ${foe.hp}");
+            }
+            default: {
+                if (txc + hero.strMod >= foe.ac) {
+                    Int dadoDanno = d8;
+                    // Riutilizzo della funzione per il danno normale (false)
+                    Int dmg = calcDamage(dadoDanno, hero.strMod, false);
+                    foe.hp -= dmg;
+                    print(i"Colpito! Inflitti ${dmg} danni. HP Mostro: ${foe.hp}");
+                } else {
+                    print("Mancato! L'arma impatta sullo scudo del Goblin.");
+                }
             }
         }
+
+        // --- TURNO DEL NEMICO ---
+        if (foe.hp > 0) {
+            Int txcFoe = d20;
+            if (txcFoe + foe.strMod >= hero.ac) {
+                Int dadoDannoFoe = d6;
+                Int dmgFoe = calcDamage(dadoDannoFoe, foe.strMod, false);
+                hero.hp -= dmgFoe;
+                print(i"Il ${foe.name} contrattacca e ti colpisce! Subisci ${dmgFoe} danni. HP Eroe: ${hero.hp}");
+            } else {
+                print(i"Il ${foe.name} manca il bersaglio.");
+            }
+        }
+
         round++;
     }
 
-    String outcome = (hero.hp > 0) ? "VICTORY" : "DEFEAT";
-    print: i"Final outcome: ${outcome} at round ${round - 1}";
+    String finale = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
+    print(i"\nEsito finale della Quest: ${finale} al round ${round - 1}!");
 }
+
 
 ```
 

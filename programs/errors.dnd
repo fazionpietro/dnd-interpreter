@@ -3,7 +3,7 @@ hero: {
 }
 
 quest: {
-    print: "--- Test Fallimento Critico (Fail-Fast) ---";
+    print("--- Test Fallimento Critico (Fail-Fast) ---");
     Int x = 10;
     Int y = 0;
     
