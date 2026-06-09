@@ -4,18 +4,21 @@ Un Domain Specific Language (DSL) per la descrizione, simulazione e risoluzione 
 
 ## 1. Introduzione
 
-### 1.1 Presentazione del Linguaggio
-**DnDLang** è un Domain Specific Language (DSL) imperativo, fortemente e staticamente tipizzato, progettato specificamente per modellare, simulare e automatizzare scenari di combattimento, sessioni di gioco e interazioni stocastiche regolate dalle meccaniche dei giochi di ruolo da tavolo, con un riferimento esplicito alla quinta edizione di *Dungeons & Dragons*. Il linguaggio si propone come uno strumento intermedio in grado di unire la rigorosità algoritmica dei linguaggi imperativi tradizionali con l'espressività gergale e le necessità tipiche di un Master o di un game designer.
+**DnDLang** è un linguaggio di programmazione imperativo tipizzato sviluppato come DSL per modellare, simulare e automatizzare scenari di combattimento e interazioni stocastiche regolate dalle meccaniche di *Dungeons & Dragons* (Quinta Edizione).
 
-### 1.2 Caratteristiche Principali e Funzionalità Avanzate
-Per rispondere pienamente ai requisiti minimi e avanzati del progetto, DnDLang integra al suo interno le seguenti peculiarità:
-- **Espressioni Stocastiche Native**: I dadi poliedrici (da 3 a 20 facce) sono cittadini di prima classe del linguaggio, valutati dinamicamente come espressioni numeriche ad ogni invocazione.
-- **Funzioni (Funzionalità Avanzata - Livello 2)**: Supporto completo alla dichiarazione di macro e sub-routine (`def`) con passaggio dei parametri per valore, isolamento dello scope locale e pieno supporto ad algoritmi ricorsivi.
-- **Flusso di Controllo Condizionato Switch (Funzionalità Avanzata - Livello 2)**: Costrutto di selezione a scelta multipla `switch-case` con blocco `default` obbligatorio o opzionale, integrato con comandi di uscita prematura (`break`).
-- **Zucchero Sintattico (Funzionalità Avanzata - Livello 1)**: Operatori di pre e post incremento/decremento unitario (`++`, `--`), assegnamenti composti (`+=`, `-=`, `*=`, `/=`), operatore ternario condizionale (`cond ? exp1 : exp2`) e stringhe interpolate con prefisso `i"..."` e valutazione dinamica interna tramite sintassi `${expr}`.
+### Caratteristiche principali
 
-### 1.3 Contesto d'Applicazione
-Il contesto applicativo ideale per DnDLang risiede nella pre-generazione e simulazione statistica di incontri di combattimento (*encounters*). Permette di caricare schede personaggio prefissate, impostare loop di comportamento per i mostri e calcolare la probabilità di sopravvivenza di un gruppo di avventurieri (Party) contro una determinata minaccia, automatizzando migliaia di lanci di dado in frazioni di secondo senza la necessità di appoggiarsi a motori di gioco esterni o pesanti software general-purpose.
+* **Tipizzazione statica** con tipi di dominio dedicati al gioco di ruolo (`HP`, `AC`, `Gold`).
+* **Espressioni stocastiche native**: i dadi poliedrici (da `d3` a `d20`) sono cittadini di prima classe del linguaggio e vengono valutati dinamicamente.
+* **Struttura a macro-sezioni**: separazione rigida e sequenziale tra funzioni (`def`), statistiche dei personaggi (`hero`, `foe`) e blocco esecutivo principale (`quest`).
+* **Costrutti condizionali e iterativi completi**: cicli `while` e flusso condizionato `switch-case` con gestione nativa delle uscite premature (`break`).
+* **Zucchero sintattico di dominio e generico**: operatori per il vantaggio/svantaggio (`adv`, `dis`), tiri contrapposti (`save`, `vs`), assegnamenti composti (`+=`, `-=`, etc.), incremento/decremento (`++`, `--`), operatore ternario e stringhe interpolate (`i"...${expr}..."`).
+* **Gestione degli errori**: controllo dei tipi statico e filosofia Fail-Fast a runtime per arrestare immediatamente il programma in caso di operazioni non permesse (es. divisione per zero).
+
+### Contesto applicativo
+
+DnDLang nasce per permettere a Game Master e game designer di eseguire simulazioni statistiche intensive di incontri di combattimento (*encounters*). Il linguaggio consente di caricare le schede dei personaggi e dei mostri, impostare cicli di comportamento e calcolare rapidamente le probabilità di sopravvivenza automatizzando migliaia di lanci di dado in frazioni di secondo, senza dipendere da motori di gioco esterni.
+
 
 ---
 
@@ -73,53 +76,44 @@ quest: {
 
 ## 3. Sintassi
 
-### 3.1 Struttura Rigida di un Programma
+### 3.1 Struttura di un programma
 
-Al fine di garantire una separazione netta tra la logica riutilizzabile (funzioni), le entità statiche coinvolte (personaggi/mostri) e l'effettivo punto di ingresso del programma (Main loop), la grammatica impone un ordine sequenziale immutabile per le macro-sezioni, formalizzato dalla seguente regola di partenza:
+Un programma DnDLang impone un ordine sequenziale immutabile per le macro-sezioni, formalizzato dalla seguente regola di partenza:
 
 ```antlr
 program : functionSection? heroSection? foeSection? questSection EOF ;
 
 ```
 
-1. **`functionSection`**: Contiene esclusivamente le definizioni delle funzioni globali precedute dalla keyword `def`. Questa sezione è puramente dichiarativa; nessun comando in essa contenuto viene eseguito finché non viene esplicitamente invocato.
-2. **`heroSection` (`hero: { ... }`)**: Blocco isolato deputato alla definizione delle statistiche dell'eroe protagonista.
-3. **`foeSection` (`foe: { ... }`)**: Blocco speculare al precedente, riservato alle statistiche delle creature ostili.
-4. **`questSection` (`quest: { ... }`)**: Rappresenta il corpo esecutivo centrale. Equivale semanticamente al metodo `main` dei linguaggi general-purpose; qui risiedono i cicli di combattimento e la logica algoritmica principale.
+* **`functionSection`**: blocco opzionale che contiene esclusivamente le definizioni delle funzioni globali precedute dalla keyword `def`. Ha natura puramente dichiarativa.
+* **`heroSection` (`hero: { ... }`)**: blocco isolato deputato alla definizione delle statistiche dell'eroe protagonista.
+* **`foeSection` (`foe: { ... }`)**: blocco riservato alle statistiche delle creature ostili.
+* **`questSection` (`quest: { ... }`)**: rappresenta il corpo esecutivo centrale (equivalente al metodo `main`). Qui risiedono i cicli di combattimento e la logica algoritmica principale.
 
-### 3.2 Tipi di Dato (Primitivi e di Dominio)
+### 3.2 Tipi di dato
 
-DnDLang si distacca dai linguaggi tradizionali affiancando ai classici tipi primitivi una serie di tipi nativi strettamente legati al dominio del gioco di ruolo:
+| Tipo | Descrizione | Esempio di valore |
+| --- | --- | --- |
+| `Int` | Intero a 32 bit con segno | `42`, `-5` |
+| `Float` | Numero in virgola mobile a 64 bit | `3.14`, `-0.5` |
+| `Bool` | Valore booleano | `true`, `false` |
+| `String` | Sequenza letterale di testo | `"Spada Corta"` |
+| `Void` | Tipo speciale non assegnabile (solo per i ritorni di funzione) | - |
+| `HP` | Punti Ferita (sottotipo di `Int`) | `24` |
+| `AC` | Classe Armatura (sottotipo di `Int`) | `15` |
+| `Gold` | Monete d'oro (sottotipo di `Float`) | `50.0` |
 
-* **Tipi Primitivi**:
-* `Int`: Valori interi a 32 bit (es. modificatori di caratteristica, conteggio dei round).
-* `Float`: Valori in virgola mobile a 64 bit per calcoli decimali generici.
-* `Bool`: Espressioni booleane standard (`true` o `false`).
-* `String`: Sequenze letterali racchiuse da doppi apici (`"..."`).
-* `Void`: Tipo speciale non assegnabile, utilizzabile esclusivamente come tipo di ritorno per funzioni che eseguono solo effetti collaterali (es. stampe a video) senza restituire dati.
+I tipi `HP` e `AC` estendono `Int`, mentre `Gold` estende `Float`. Sono compatibili nelle espressioni aritmetiche con i rispettivi tipi primitivi di riferimento attraverso meccanismi di promozione o troncamento implicito.
 
+### 3.3 Token dei Dadi Poliedrici e Operatori di Dominio
 
-* **Tipi di Dominio**:
-* `HP`: Tipo intero specializzato nella rappresentazione dei Punti Ferita.
-* `AC`: Tipo intero specializzato per la Classe Armatura.
-* `Gold`: Tipo decimale (virgola mobile) dedicato alla quantificazione delle monete d'oro (`gp`).
+La gestione stocastica si basa su token dedicati che mappano i dadi tradizionali:
+`d20`, `d12`, `d10`, `d8`, `d6`, `d4`, `d3`.
 
+Vengono valutati come espressioni atomiche all'interno di qualsiasi operazione aritmetica (es. `3 * d6 + 4`). I costrutti speciali per i tiri includono:
 
-
-### 3.3 Regole Lessicali e Token dei Dadi Poliedrici
-
-La gestione stocastica si basa su token lessicali dedicati che mappano i dadi della tradizione ludica:
-
-```antlr
-D20 : 'd20' ; D12 : 'd12' ; D10 : 'd10' ; D8 : 'd8' ; D6 : 'd6' ; D4 : 'd4' ; D3 : 'd3' ;
-
-```
-
-Questi token vengono intercettati dal Lexer e convertiti dal Parser in espressioni atomiche valide all'interno di qualsiasi operazione aritmetica (es. `3 * d6 + 4`).
-Le costrutti speciali per i tiri includono:
-
-* **`adv` / `dis**`: Modificatori prefissi applicabili alle espressioni dei dadi per implementare il *Vantaggio* (lancio di due dadi e selezione del valore massimo) o lo *Svantaggio* (selezione del valore minimo).
-* **`save` / `vs**`: Operatori infissi binari per la risoluzione rapida dei conflitti. `expr1 save expr2` verifica se il tiro supera o uguaglia una determinata Classe di Difficoltà (CD), mentre `expr1 vs expr2` modella una prova contrapposta dove il primo elemento deve superare strettamente il secondo.
+* **`adv` / `dis`**: modificatori prefissi applicabili alle espressioni dei dadi per implementare il *Vantaggio* (lancio di due dadi e selezione del valore massimo) o lo *Svantaggio* (selezione del valore minimo).
+* **`save` / `vs`**: operatori infissi binari. `expr1 save expr2` verifica se il tiro supera o uguaglia una determinata Classe di Difficoltà (CD). `expr1 vs expr2` modella una prova contrapposta dove il primo elemento deve superare strettamente il secondo.
 
 
 ---
@@ -139,16 +133,17 @@ Le scelte semantiche alla base di DnDLang mirano a massimizzare la prevedibilit�
 
 ### 4.2 Gerarchia dei Tipi e Strategie di Conversione (Coercizione)
 
-DnDLang implementa un sistema di sottotipaggio e coercizione implicita orientato alla sicurezza numerica, strutturato secondo le seguenti regole:
+Le conversioni numeriche implicite (coercizione) seguono le catene di sottotipaggio:
 
-1. I tipi di dominio `HP` e `AC` sono considerati sotto-tipi semantici di `Int`. Qualsiasi valore floating-point o espressione decimal assegnata a variabili di tipo `Int`, `HP` o `AC` viene automaticamente convertita tramite troncamento della parte decimale.
-2. Il tipo `Int` è convertibile implicitamente verso `Gold` o `Float`. Se un numero intero viene assegnato a una variabile `Gold`, esso viene promosso a Double.
-3. Le stringhe e i booleani sono totalmente isolati: non è ammessa alcuna forma di conversione implicita o esplicita tra tipi testuali/logici e tipi numerici. Un tentativo di addizionare una stringa a un intero produce un blocco immediato.
+$$\text{HP} \subsetneq \text{Int} \subsetneq \text{Float}$$
+$$\text{AC} \subsetneq \text{Int} \subsetneq \text{Float}$$
+$$\text{Int} \subsetneq \text{Gold} \subsetneq \text{Float}$$
+    
+Qualsiasi valore decimale assegnato a variabili di tipo `Int`, `HP` o `AC` viene automaticamente convertito tramite troncamento della parte decimale. Il tipo `Int` viene promosso implicitamente verso `Gold` o `Float`. Le stringhe e i booleani sono totalmente isolati: non è ammessa alcuna forma di conversione implicita o esplicita con i tipi numerici. Gli operatori logici `&&` e `||` eseguono una valutazione completa di entrambi i rami per garantire la coerenza dello stato stocastico dei dadi.
 
-### 4.3 Gestione Programmatica degli Errori (Fail-Fast)
+### 4.3 Gestione degli errori a runtime
 
-Il linguaggio adotta una filosofia difensiva definita **Fail-Fast**. L'interprete non tenta di recuperare lo stato del programma o di assegnare valori di fallback (come `null` o `0`) in presenza di anomalie semantiche. Qualsiasi violazione dei vincoli operativi provoca l'arresto immediato del thread esecutivo.
-Vengono intercettati e tracciati programmaticamente tramite la classe custom `DnDLangError` i seguenti eventi:
+Il linguaggio adotta una filosofia difensiva definita **Fail-Fast**.L'interprete non assegna valori di fallback o di default, ma provoca l'arresto immediato del thread esecutivo in presenza di anomalie semantiche, tracciandole tramite la classe custom `DnDLangError`. Gli errori intercettati includono::
 
 * Utilizzo o assegnamento di variabili non preventivamente dichiarate nello scope corrente o superiore.
 * Errori aritmetici irreversibili, specificamente la divisione o il calcolo del modulo per zero (es. `x / 0`).
@@ -157,7 +152,7 @@ Vengono intercettati e tracciati programmaticamente tramite la classe custom `Dn
 
 ### 4.4 Formalizzazione della Semantica Operazionale (Regole di Transizione)
 
-Utilizzando la notazione standard della semantica operazionale strutturata (SOS), definiamo lo stato della memoria come una funzione $\sigma: \text{Id} \rightarrow \text{Val}$. Indichiamo con $\langle e, \sigma \rangle \rightarrow v$ il fatto che la valutazione dell'espressione $e$ nello stato $\sigma$ produce il valore $v$.
+Di seguito alcune regole di transizione della semantica operazionale strutturata (SOS) di DnDLang, dove la memoria è definita come una funzione $\sigma: \text{Id} \rightarrow \text{Val}$.
 
 **Regola dell'Assegnamento Semplice (`=`)**:
 Quando viene valutato un comando di assegnamento, l'espressione a destra viene ridotta a un valore atomico $v$, e la memoria viene aggiornata associando stabilmente quel valore all'identificatore $id$.
@@ -191,7 +186,7 @@ $$\text{Dice-Advantage} \quad \frac{\text{roll}_1 = \text{random}(1, \text{sides
 
 ### 5.1 Architettura del Visitor ed Esplorazione dell'AST
 
-L'architettura del sistema poggia interamente sulle classi generate da ANTLR4. Il nucleo operativo è rappresentato dalla classe `DnDInterpreter`, la quale estende `DnDLangBaseVisitor<Object>`. Invece di tradurre il codice sorgente in un linguaggio intermedio o in bytecode, l'interprete esegue un'esplorazione diretta e ricorsiva dell'Abstract Syntax Tree (AST) generato dal Parser durante l'analisi del testo. Ciascun metodo `visit...` della classe è responsabile della valutazione semantica di uno specifico nodo dell'albero, restituendo un oggetto Java nativo (`Integer`, `Double`, `Boolean` o `String`) come risultato.
+L'architettura del sistema si basa sulle classi generate da ANTLR4. Il nucleo operativo è rappresentato dalla classe `DnDInterpreter`, la quale estende `DnDLangBaseVisitor<Object>`. L'interprete esegue un'esplorazione diretta e ricorsiva dell'Abstract Syntax Tree (AST) generato dal Parser durante l'analisi del testo. Ciascun metodo `visit...` della classe è responsabile della valutazione semantica di uno specifico nodo dell'albero, restituendo un oggetto Java nativo (`Integer`, `Double`, `Boolean` o `String`) come risultato.
 
 ### 5.2 Gestione degli Scope e Record di Attivazione
 
@@ -212,16 +207,15 @@ All'ingresso di un blocco di codice (`visitBlock`), viene invocato il metodo `en
 
 #### A. Interruzione Prematura del Flusso (`return` e `break`)
 
-Una delle problematiche più complesse nell'implementazione di un interprete basato sul pattern Visitor è l'interruzione immediata dell'esecuzione profonda di un ciclo o di una funzione quando si incontra un comando di uscita precoce come `return` o `break`. Poiché il Visitor esplora ricorsivamente l'albero tramite chiamate a metodi Java, un semplice comando di `return` dentro un blocco `if` nidificato interromperebbe solo il metodo del Visitor locale, non la funzione intera.
+Poiché il Visitor esplora ricorsivamente l'albero tramite chiamate a metodi Java, un semplice comando di return dentro un blocco nidificato interromperebbe solo il metodo del Visitor locale e non la funzione intera.
 
-* **Soluzione per il `return**`: È stata sfruttata l'infrastruttura dei segnali della Java Virtual Machine tramite il lancio di un'eccezione di controllo personalizzata, denominata `ReturnException`. Quando l'interprete incontra un `returnStmt`, valuta l'eventuale espressione associata e lancia immediatamente la `ReturnException`. Il metodo `visitFunctionCallExpr`, che si trova al vertice della chiamata, racchiude l'attivazione della funzione all'interno di un blocco `try-catch`. Intercettando l'eccezione, estrae il valore racchiuso, ripristina l'ambiente ed esce in modo pulito.
-* **Soluzione per il `break**`: Per il comando `break` nei cicli `while` e nei costrutti `switch`, è stato adottato un flag booleano interno all'interprete chiamato `isBreaking`. Quando viene rilevato un `breakStmt`, il flag viene posto a `true`. Tutti i cicli esecutivi di blocco controllano questo flag prima di passare al comando successivo; se attivo, interrompono l'iterazione e propagano l'uscita fino al gestore del ciclo primario, che provvederà a resettare il flag a `false`.
+* **Soluzione per il `return` **: È stata sfruttata l'infrastruttura dei segnali della Java Virtual Machine tramite il lancio di un'eccezione di controllo personalizzata, denominata `ReturnException`. Quando l'interprete incontra un `returnStmt`, valuta l'eventuale espressione associata e lancia immediatamente la `ReturnException`. Il metodo `visitFunctionCallExpr`, che si trova al vertice della chiamata, racchiude l'attivazione della funzione all'interno di un blocco `try-catch`. Intercettando l'eccezione, estrae il valore racchiuso, ripristina l'ambiente ed esce in modo pulito.
+* **Soluzione per il `break`**: Per il comando `break` nei cicli `while` e nei costrutti `switch`, è stato adottato un flag booleano interno all'interprete chiamato `isBreaking`. Quando viene rilevato un `breakStmt`, il flag viene posto a `true`. Tutti i cicli esecutivi di blocco controllano questo flag prima di passare al comando successivo; se attivo, interrompono l'iterazione e propagano l'uscita fino al gestore del ciclo primario, che provvederà a resettare il flag a `false`.
 
 #### B. Parsing Dinamico e Sotto-Alberi per Stringhe Interpolate
 
 L'implementazione delle stringhe interpolate `i"..."` richiedeva la capacità di valutare qualsiasi espressione complessa inserita all'interno dei delimitatori `${}` direttamente nel contesto corrente.
-
-* **Soluzione**: Invece di limitare l'interpolazione a semplici variabili, il metodo `visitIStringExpr` estrae il testo racchiuso tramite espressioni regolari e, per ciascun frammento individuato, **istanzia al volo** un mini-flusso ANTLR completo (`CharStream` -> `Lexer` -> `TokenStream` -> `Parser`). Viene isolato il nodo sintattico `expr` e viene invocato ricorsivamente il Visitor principale (`this.visit(exprCtx)`) sul sotto-albero appena generato. Questo approccio permette di supportare stringhe estremamente potenti come `i"Risultato: ${d20 + getModifier(hero.strength)}"`, riutilizzando la logica di valutazione e lo stato di memoria dell'interprete principale senza alcuna duplicazione di codice.
+Il metodo visitIStringExpr estrae il testo racchiuso tramite espressioni regolari e, per ciascun frammento individuato, istanzia al volo un mini-flusso ANTLR completo (CharStream -> Lexer -> TokenStream -> Parser). Viene isolato il nodo sintattico expr e viene invocato ricorsivamente il Visitor principale (this.visit(exprCtx)) sul sotto-albero appena generato.
 
 ---
 
