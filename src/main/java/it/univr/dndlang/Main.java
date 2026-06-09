@@ -4,8 +4,10 @@ import java.io.IOException;
 import org.antlr.v4.runtime.*;
 import org.antlr.v4.runtime.tree.ParseTree;
 
+/** Entry point: legge un file .dnd, esegue lexer/parser e avvia l'interprete. */
 public class Main {
 
+  /** Legge il file sorgente passato come argomento, lo analizza e lo interpreta. */
   public static void main(String[] args) {
     if (args.length == 0) {
       System.err.println("Errore: Nessun file di input specificato.");
@@ -18,6 +20,7 @@ public class Main {
     String filePath = args[0];
 
     try {
+      // Pipeline: sorgente -> lexer -> token -> parser -> AST
       CharStream input = CharStreams.fromFileName(filePath);
       DnDLangLexer lexer = new DnDLangLexer(input);
       CommonTokenStream tokens = new CommonTokenStream(lexer);
@@ -31,6 +34,7 @@ public class Main {
         System.exit(1);
       }
 
+      // Visita l'AST tramite l'interprete
       DnDInterpreter interpreter = new DnDInterpreter();
       interpreter.visit(tree);
 

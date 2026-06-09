@@ -25,21 +25,34 @@ import it.univr.dndlang.DnDLangParser.UnaryExprContext;
 import it.univr.dndlang.DnDLangParser.WhileStmtContext;
 import org.antlr.v4.runtime.ParserRuleContext;
 
+/** Visitor che interpreta l'AST generato dal parser DnDLang. */
 public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
+  // tabella dei simboli
   private final Environment env = new Environment();
+  // prefisso hero./foe. attivo
   private String currentStructPrefix = "";
+  // flag break attivo
   private boolean isBreaking = false;
+  // tipo di ritorno della funzione corrente
   private String currentReturnType = "Void";
 
+  // --- Struttura del programma (program, hero, foe, quest) ---
+
+  /** Visita il programma nell'ordine: funzioni, hero, foe, quest. */
   @Override
   public Object visitProgram(DnDLangParser.ProgramContext ctx) {
-    if (ctx.functionSection() != null) visit(ctx.functionSection());
-    if (ctx.heroSection() != null) visit(ctx.heroSection());
-    if (ctx.foeSection() != null) visit(ctx.foeSection());
-    if (ctx.questSection() != null) visit(ctx.questSection());
+    if (ctx.functionSection() != null)
+      visit(ctx.functionSection());
+    if (ctx.heroSection() != null)
+      visit(ctx.heroSection());
+    if (ctx.foeSection() != null)
+      visit(ctx.foeSection());
+    if (ctx.questSection() != null)
+      visit(ctx.questSection());
     return null;
   }
 
+  /** Imposta il prefisso "hero." e dichiara le variabili della sezione hero. */
   @Override
   public Object visitHeroSection(DnDLangParser.HeroSectionContext ctx) {
     currentStructPrefix = "hero.";
@@ -48,6 +61,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  /** Imposta il prefisso "foe." e dichiara le variabili della sezione foe. */
   @Override
   public Object visitFoeSection(DnDLangParser.FoeSectionContext ctx) {
     currentStructPrefix = "foe.";
@@ -56,17 +70,22 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  /** Esegue il blocco della sezione quest (corpo principale del programma). */
   @Override
   public Object visitQuestSection(DnDLangParser.QuestSectionContext ctx) {
     return visit(ctx.block());
   }
 
+  // --- Blocchi e istruzioni ---
+
+  /** Apre un nuovo scope, esegue tutte le istruzioni e chiude lo scope. */
   @Override
   public Object visitBlock(DnDLangParser.BlockContext ctx) {
     env.enterBlock();
     if (ctx.statement() != null) {
       for (var stmt : ctx.statement()) {
         visit(stmt);
+        // se un break è stato attivato, interrompe l'esecuzione del blocco
         if (isBreaking) {
           break;
         }
@@ -76,19 +95,32 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  /**
+   * Dichiara una variabile: determina il tipo, valuta l'espressione e la registra
+   * nell'ambiente.
+   */
   @Override
   public Object visitDecl(DnDLangParser.DeclContext ctx) {
     String declaredType;
-    if (ctx.TYPE_HP() != null) declaredType = "HP";
-    else if (ctx.TYPE_AC() != null) declaredType = "AC";
-    else if (ctx.TYPE_GOLD() != null) declaredType = "Gold";
-    else if (ctx.TYPE_INT() != null) declaredType = "Int";
-    else if (ctx.TYPE_FLOAT() != null) declaredType = "Float";
-    else if (ctx.TYPE_BOOL() != null) declaredType = "Bool";
-    else if (ctx.TYPE_STRING() != null) declaredType = "String";
-    else throw new DnDLangError("Tipo sconosciuto", ctx.getStart().getLine());
+    if (ctx.TYPE_HP() != null)
+      declaredType = "HP";
+    else if (ctx.TYPE_AC() != null)
+      declaredType = "AC";
+    else if (ctx.TYPE_GOLD() != null)
+      declaredType = "Gold";
+    else if (ctx.TYPE_INT() != null)
+      declaredType = "Int";
+    else if (ctx.TYPE_FLOAT() != null)
+      declaredType = "Float";
+    else if (ctx.TYPE_BOOL() != null)
+      declaredType = "Bool";
+    else if (ctx.TYPE_STRING() != null)
+      declaredType = "String";
+    else
+      throw new DnDLangError("Tipo sconosciuto", ctx.getStart().getLine());
 
     String rawId = ctx.ID().getText();
+    // antepone "hero." o "foe." se siamo dentro una sezione struct
     String id = currentStructPrefix + rawId;
 
     Object value;
@@ -106,6 +138,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  // --- Assegnamento e incremento/decremento ---
+
+  /** Gestisce l'assegnamento semplice e composto (=, +=, -=, *=, /=). */
   @Override
   public Object visitAssign(DnDLangParser.AssignContext ctx) {
     String rawId = ctx.ID().getText();
@@ -123,6 +158,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     Object leftValue = null;
     Object finalValue = null;
 
+    // il secondo figlio del nodo AST è l'operatore di assegnamento
     switch (ctx.getChild(1).getText()) {
       case "=":
         finalValue = rightValue;
@@ -131,6 +167,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       case "+=":
         leftValue = env.lookup(id);
         double sum = asDouble(leftValue, ctx) + asDouble(rightValue, ctx);
+        // preserva il tipo intero solo se entrambi gli operandi sono interi
         finalValue = areBothIntegers(leftValue, rightValue) ? (int) sum : sum;
         break;
 
@@ -160,12 +197,17 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
         throw new DnDLangError(
             "Errore runtime: assgnamento non riconosciuto", ctx.getStart().getLine());
     }
+    // adatta il risultato al tipo dichiarato prima di salvarlo
     finalValue = coerceToDeclaredType(finalValue, declaredType);
     env.assign(id, finalValue);
 
     return null;
   }
 
+  /**
+   * Valuta il post-incremento/decremento (x++, x--) e restituisce il valore
+   * precedente.
+   */
   @Override
   public Object visitPostIncExpr(DnDLangParser.PostIncExprContext ctx) {
     String rawId = ctx.ID().getText();
@@ -184,14 +226,19 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
           "Runtime error: operatore di incremento non riconosciuto", ctx.getStart().getLine());
     }
 
+    // mantiene il tipo originale (Integer o Double)
     Object newValue = (oldValue instanceof Integer) ? (int) calcValue : calcValue;
 
     newValue = coerceToDeclaredType(newValue, declaredType);
     env.assign(id, newValue);
 
+    // post-incremento: restituisce il valore prima della modifica
     return oldValue;
   }
 
+  /**
+   * Valuta il pre-incremento/decremento (++x, --x) e restituisce il nuovo valore.
+   */
   @Override
   public Object visitPreIncExpr(PreIncExprContext ctx) {
     String rawId = ctx.ID().getText();
@@ -218,6 +265,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return newValue;
   }
 
+  /** Valuta l'operatore ternario: condizione ? valore_vero : valore_falso. */
   @Override
   public Object visitTernaryExpr(TernaryExprContext ctx) {
     Object condition = visit(ctx.expr(0));
@@ -235,6 +283,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     }
   }
 
+  // --- Print e interpolazione stringhe ---
+
+  /** Stampa il valore di un'espressione o di una stringa interpolata. */
   @Override
   public Object visitPrintStmt(DnDLangParser.PrintStmtContext ctx) {
     Object value = visit(ctx.expr() != null ? ctx.expr() : ctx.ISTRING());
@@ -242,21 +293,27 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  // --- Letterali ---
+
+  /** Restituisce il valore intero del letterale. */
   @Override
   public Object visitIntExpr(IntExprContext ctx) {
     return Integer.parseInt(ctx.INT().getText());
   }
 
+  /** Restituisce il valore decimale del letterale. */
   @Override
   public Object visitFloatExpr(FloatExprContext ctx) {
     return Double.parseDouble(ctx.FLOAT().getText());
   }
 
+  /** Restituisce il valore booleano del letterale. */
   @Override
   public Object visitBoolExpr(BoolExprContext ctx) {
     return Boolean.parseBoolean(ctx.BOOL().getText());
   }
 
+  /** Restituisce il contenuto della stringa, gestendo le sequenze di escape. */
   @Override
   public Object visitStringExpr(StringExprContext ctx) {
     String str = ctx.STRING().getText();
@@ -265,12 +322,15 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return content.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"");
   }
 
+  /** Interpola una stringa i"...", sostituendo ${expr} con il valore valutato. */
   @Override
   public Object visitIStringExpr(DnDLangParser.IStringExprContext ctx) {
     String rawString = ctx.ISTRING().getText();
+    // rimuove il prefisso i" e le virgolette finali
     String content = rawString.substring(2, rawString.length() - 1);
     content = content.replace("\\n", "\n").replace("\\t", "\t").replace("\\\"", "\"");
 
+    // cerca tutte le occorrenze di ${...} nella stringa
     java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\$\\{([^}]+)\\}");
     java.util.regex.Matcher matcher = pattern.matcher(content);
     StringBuilder result = new StringBuilder();
@@ -280,11 +340,10 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       String replacement;
 
       try {
-        org.antlr.v4.runtime.CharStream input =
-            org.antlr.v4.runtime.CharStreams.fromString(exprText);
+        // crea un mini-parser per valutare l'espressione dentro ${...}
+        org.antlr.v4.runtime.CharStream input = org.antlr.v4.runtime.CharStreams.fromString(exprText);
         DnDLangLexer lexer = new DnDLangLexer(input);
-        org.antlr.v4.runtime.CommonTokenStream tokens =
-            new org.antlr.v4.runtime.CommonTokenStream(lexer);
+        org.antlr.v4.runtime.CommonTokenStream tokens = new org.antlr.v4.runtime.CommonTokenStream(lexer);
         DnDLangParser parser = new DnDLangParser(tokens);
 
         parser.removeErrorListeners();
@@ -296,6 +355,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
         } else {
           Object val = visit(exprCtx);
 
+          // cerca la variabile per determinare se aggiungere un suffisso di tipo (HP, AC,
+          // gp)
           String resolvedIdForType = null;
           if (!currentStructPrefix.isEmpty() && env.contains(currentStructPrefix + exprText)) {
             resolvedIdForType = currentStructPrefix + exprText;
@@ -305,13 +366,12 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
           if (resolvedIdForType != null) {
             String type = env.getType(resolvedIdForType);
-            replacement =
-                switch (type) {
-                  case "HP" -> val + " HP";
-                  case "AC" -> val + " AC";
-                  case "Gold" -> val + " gp";
-                  default -> val.toString();
-                };
+            replacement = switch (type) {
+              case "HP" -> val + " HP";
+              case "AC" -> val + " AC";
+              case "Gold" -> val + " gp";
+              default -> val.toString();
+            };
           } else {
             replacement = val.toString();
           }
@@ -326,6 +386,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
     return result.toString();
   }
+
+  // --- Dadi e meccaniche D&D (d20, adv/dis, save/vs) ---
 
   @Override
   public Object visitD20Expr(DnDLangParser.D20ExprContext ctx) {
@@ -362,6 +424,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return rollDice(3);
   }
 
+  /** Lancia due dadi e tiene il migliore (adv) o il peggiore (dis). */
   @Override
   public Object visitDiceAdvDisExpr(DiceAdvDisExprContext ctx) {
 
@@ -378,6 +441,10 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return res;
   }
 
+  /**
+   * Valuta un tiro salvezza (save) o una prova contrapposta (vs), restituisce un
+   * booleano.
+   */
   @Override
   public Object visitSaveVsExpr(SaveVsExprContext ctx) {
     Object left = visit(ctx.expr(0));
@@ -412,6 +479,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     }
   }
 
+  // --- Espressioni aritmetiche, relazionali e logiche ---
+
+  /** Restituisce il valore di una variabile, risolvendo il prefisso struct. */
   @Override
   public Object visitIdExpr(IdExprContext ctx) {
     String rawId = ctx.ID().getText();
@@ -419,11 +489,13 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return env.lookup(id);
   }
 
+  /** Valuta l'espressione tra parentesi. */
   @Override
   public Object visitParenExpr(ParenExprContext ctx) {
     return visit(ctx.expr());
   }
 
+  /** Valuta addizione o sottrazione, preservando il tipo intero se possibile. */
   @Override
   public Object visitAddSubExpr(AddSubExprContext ctx) {
     Object left = visit(ctx.expr(0));
@@ -445,6 +517,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return result;
   }
 
+  /**
+   * Valuta moltiplicazione, divisione o modulo con controllo divisione per zero.
+   */
   @Override
   public Object visitMulDivExpr(MulDivExprContext ctx) {
     Object left = visit(ctx.expr(0));
@@ -457,10 +532,12 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     if (ctx.STAR() != null) {
       result = l * r;
     } else if (ctx.SLASH() != null) {
-      if (r == 0) throw new DnDLangError("divisione per zero", ctx.getStart().getLine());
+      if (r == 0)
+        throw new DnDLangError("divisione per zero", ctx.getStart().getLine());
       result = l / r;
     } else if (ctx.PERCENT() != null) {
-      if (r == 0) throw new DnDLangError("modulo per zero", ctx.getStart().getLine());
+      if (r == 0)
+        throw new DnDLangError("modulo per zero", ctx.getStart().getLine());
       result = l % r;
     }
 
@@ -470,6 +547,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return result;
   }
 
+  /** Valuta un confronto relazionale ({@literal <, <=, >, >=}). */
   @Override
   public Object visitRelationalExpr(RelationalExprContext ctx) {
     Object left = visit(ctx.expr(0));
@@ -478,14 +556,19 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     double l = asDouble(left, ctx);
     double r = asDouble(right, ctx);
 
-    if (ctx.LT() != null) return l < r;
-    else if (ctx.LE() != null) return l <= r;
-    else if (ctx.GT() != null) return l > r;
-    else if (ctx.GE() != null) return l >= r;
+    if (ctx.LT() != null)
+      return l < r;
+    else if (ctx.LE() != null)
+      return l <= r;
+    else if (ctx.GT() != null)
+      return l > r;
+    else if (ctx.GE() != null)
+      return l >= r;
 
     throw new DnDLangError("Operatore relazionale non riconosciuto", ctx.getStart().getLine());
   }
 
+  /** Valuta uguaglianza (==) o disuguaglianza (!=). */
   @Override
   public Object visitEqualityExpr(EqualityExprContext ctx) {
     Object left = visit(ctx.expr(0));
@@ -499,20 +582,30 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       isEqual = left.equals(right);
     }
 
-    if (ctx.EQ() != null) return isEqual;
-    else if (ctx.NEQ() != null) return !isEqual;
+    if (ctx.EQ() != null)
+      return isEqual;
+    else if (ctx.NEQ() != null)
+      return !isEqual;
 
     throw new DnDLangError("Operatore di confronto non riconosciuto", ctx.getStart().getLine());
   }
 
+  // --- Chiamata di funzione ---
+
+  /**
+   * Invoca una funzione: valuta gli argomenti, apre uno scope locale e gestisce
+   * il return.
+   */
   @Override
   public Object visitFunctionCallExpr(DnDLangParser.FunctionCallExprContext ctx) {
     String funcName = ctx.ID().getText();
     int line = ctx.getStart().getLine();
 
+    // recupera il simbolo e il nodo AST della dichiarazione originale
     FunctionSymbol function = env.lookupFunction(funcName, line);
     DnDLangParser.FunctionDeclContext delCtx = function.getDeclarationNode();
 
+    // valuta tutti gli argomenti prima di entrare nello scope della funzione
     java.util.ArrayList<Object> evalArguments = new java.util.ArrayList<>();
     if (ctx.expr() != null) {
       for (DnDLangParser.ExprContext argCtx : ctx.expr()) {
@@ -538,11 +631,14 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
           line);
     }
 
+    // salva e aggiorna il tipo di ritorno per supportare chiamate
+    // ricorsive/annidate
     String previousReturnType = currentReturnType;
     currentReturnType = function.getType();
 
     env.enterBlock();
 
+    // il return è implementato lanciando una ReturnException catturata qui sotto
     try {
       for (int i = 0; i < formalParameter.size(); i++) {
         DnDLangParser.ParamDeclContext paramCtx = formalParameter.get(i);
@@ -568,8 +664,10 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
         env.declare(paramName, coercedValue, paramType);
       }
 
+      // esegue il corpo della funzione; un return lancerà ReturnException
       visit(delCtx.block());
 
+      // se arriviamo qui senza ReturnException, la funzione non-Void è in errore
       if (!"Void".equals(currentReturnType)) {
         throw new DnDLangError(
             "La funzione '"
@@ -582,6 +680,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       return null;
 
     } catch (ReturnException e) {
+      // il return è stato eseguito: estrae il valore dalla eccezione
       Object retVal = e.getValue();
 
       if ("Void".equals(currentReturnType)) {
@@ -605,29 +704,40 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       }
 
     } finally {
+      // ripristina lo scope e il tipo di ritorno del chiamante
       env.exitBlock();
       currentReturnType = previousReturnType;
     }
   }
 
+  /** Valuta un'espressione usata come istruzione (scarta il risultato). */
   @Override
   public Object visitExprStmt(ExprStmtContext ctx) {
     visit(ctx.expr());
     return null;
   }
 
+  /** Lancia il dado specificato dalla regola diceOnly. */
   @Override
   public Object visitDiceOnly(DiceOnlyContext ctx) {
-    if (ctx.D20() != null) return rollDice(20);
-    if (ctx.D12() != null) return rollDice(12);
-    if (ctx.D10() != null) return rollDice(10);
-    if (ctx.D8() != null) return rollDice(8);
-    if (ctx.D6() != null) return rollDice(6);
-    if (ctx.D4() != null) return rollDice(4);
-    if (ctx.D3() != null) return rollDice(3);
+    if (ctx.D20() != null)
+      return rollDice(20);
+    if (ctx.D12() != null)
+      return rollDice(12);
+    if (ctx.D10() != null)
+      return rollDice(10);
+    if (ctx.D8() != null)
+      return rollDice(8);
+    if (ctx.D6() != null)
+      return rollDice(6);
+    if (ctx.D4() != null)
+      return rollDice(4);
+    if (ctx.D3() != null)
+      return rollDice(3);
     throw new DnDLangError("Dado non riconosciuto", ctx.getStart().getLine());
   }
 
+  /** Valuta l'AND logico tra due espressioni booleane. */
   @Override
   public Object visitAndExpr(AndExprContext ctx) {
     Object left = visit(ctx.expr(0));
@@ -640,6 +750,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return (Boolean) left && (Boolean) right;
   }
 
+  /** Valuta l'OR logico tra due espressioni booleane. */
   @Override
   public Object visitOrExpr(OrExprContext ctx) {
     Object left = visit(ctx.expr(0));
@@ -652,6 +763,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return (Boolean) left || (Boolean) right;
   }
 
+  /** Valuta un operatore unario: negazione logica (!) o aritmetica (-). */
   @Override
   public Object visitUnaryExpr(UnaryExprContext ctx) {
     Object value = visit(ctx.expr());
@@ -672,12 +784,19 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     throw new DnDLangError("Operatore unario non riconosciuto", ctx.getStart().getLine());
   }
 
+  // --- Return e dichiarazione di funzione ---
+
+  /**
+   * Lancia una ReturnException per interrompere l'esecuzione e restituire il
+   * valore.
+   */
   @Override
   public Object visitReturnStmt(DnDLangParser.ReturnStmtContext ctx) {
     Object value = (ctx.expr() != null) ? visit(ctx.expr()) : null;
     throw new ReturnException(value, currentReturnType); // usa il tipo corrente
   }
 
+  /** Registra una funzione nell'ambiente con nome, tipo di ritorno e nodo AST. */
   @Override
   public Object visitFunctionDecl(DnDLangParser.FunctionDeclContext ctx) {
     String name = ctx.ID().getText();
@@ -688,6 +807,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  // --- Controllo di flusso (if, while, switch, break) ---
+
+  /** Valuta la condizione ed esegue il blocco then o il blocco else. */
   @Override
   public Object visitIfStmt(IfStmtContext ctx) {
     Object condition = visit(ctx.expr());
@@ -704,6 +826,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  /**
+   * Esegue il corpo del ciclo finché la condizione è vera o si incontra un break.
+   */
   @Override
   public Object visitWhileStmt(WhileStmtContext ctx) {
     while (true) {
@@ -729,6 +854,10 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  /**
+   * Confronta il valore dello switch con ogni case ed esegue il blocco
+   * corrispondente.
+   */
   @Override
   public Object visitSwitchStmt(SwitchStmtContext ctx) {
     Object switchValue = visit(ctx.expr());
@@ -745,6 +874,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
       if (isMatch) {
         visit(caseCtx.block());
+        // resetta il flag break dopo l'esecuzione del case corrispondente
         isBreaking = false;
         return null;
       }
@@ -756,14 +886,16 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  /** Attiva il flag di break per interrompere il ciclo corrente. */
   @Override
   public Object visitBreakStmt(BreakStmtContext ctx) {
     isBreaking = true;
     return null;
   }
 
-  // --- Utility Methods ---
+  // --- Metodi di utilità ---
 
+  /** Restituisce il valore di default per il tipo dato (0, false, ""). */
   private Object getDefaultValueForType(String type, ParserRuleContext ctx) {
     return switch (type) {
       case "HP", "AC", "Int" -> 0;
@@ -774,24 +906,30 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     };
   }
 
+  /**
+   * Converte un valore al tipo dichiarato, se compatibile (es. Int → Gold diventa
+   * Double).
+   */
   private Object coerceToDeclaredType(Object value, String declaredType) {
+    // Gold è sempre Double: converte un Integer in Double
     if ("Gold".equals(declaredType) && value instanceof Integer i) {
       return i.doubleValue();
     }
+    // HP, AC e Int sono sempre interi: tronca un Double
     if (("HP".equals(declaredType) || "AC".equals(declaredType) || "Int".equals(declaredType))
         && value instanceof Double d) {
       return (int) d.doubleValue();
     }
 
-    boolean typeMatch =
-        switch (declaredType) {
-          case "Int", "HP", "AC" -> value instanceof Integer;
-          case "Float", "Gold" -> value instanceof Double;
-          case "Bool" -> value instanceof Boolean;
-          case "String" -> value instanceof String;
-          case "Void" -> value == null;
-          default -> false;
-        };
+    // se non è necessaria una conversione, verifica la compatibilità del tipo
+    boolean typeMatch = switch (declaredType) {
+      case "Int", "HP", "AC" -> value instanceof Integer;
+      case "Float", "Gold" -> value instanceof Double;
+      case "Bool" -> value instanceof Boolean;
+      case "String" -> value instanceof String;
+      case "Void" -> value == null;
+      default -> false;
+    };
     if (!typeMatch) {
 
       throw new IllegalArgumentException(
@@ -804,6 +942,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return value;
   }
 
+  /** Esegue un blocco dichiarativo (hero/foe) senza creare un nuovo scope. */
   private Object visitDeclarativeBlock(DnDLangParser.BlockContext ctx) {
     if (ctx.statement() != null) {
       for (var stmt : ctx.statement()) {
@@ -816,6 +955,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     return null;
   }
 
+  /** Converte un valore numerico in double, errore se non numerico. */
   private double asDouble(Object value, ParserRuleContext ctx) {
     if (value instanceof Number num) {
       return num.doubleValue();
@@ -824,15 +964,22 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
         "Operazione matematica su un tipo non numerico: " + value, ctx.getStart().getLine());
   }
 
+  /** Verifica se entrambi gli operandi sono interi. */
   private boolean areBothIntegers(Object left, Object right) {
     return left instanceof Integer && right instanceof Integer;
   }
 
+  /** Genera un numero casuale tra 1 e il numero di facce del dado. */
   private int rollDice(int sides) {
     return new java.util.Random().nextInt(sides) + 1;
   }
 
+  /**
+   * Risolve un identificatore applicando il prefisso struct (hero./foe.) se
+   * presente.
+   */
   private String resolveId(String rawId, int line) {
+    // dentro hero/foe, prova prima con il prefisso (es. "hero.hp")
     if (!currentStructPrefix.isEmpty()) {
       String prefixedId = currentStructPrefix + rawId;
       if (env.contains(prefixedId)) {
@@ -840,6 +987,7 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       }
     }
 
+    // se non trovato con prefisso, cerca l'identificatore globale
     if (env.contains(rawId)) {
       return rawId;
     }
