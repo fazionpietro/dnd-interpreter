@@ -1,57 +1,59 @@
 # DnDLang
 
-Un Domain Specific Language (DSL) per la descrizione, simulazione e risoluzione di incontri e sessioni di combattimento in stile Dungeons & Dragons.
+Un Domain Specific Language (DSL) per la descrizione, simulazione e risoluzione di incontri di combattimento in stile Dungeons & Dragons.
+
+---
 
 ## 1. Introduzione
 
-**DnDLang** è un linguaggio di programmazione imperativo tipizzato sviluppato come DSL per modellare, simulare e automatizzare scenari di combattimento e interazioni stocastiche regolate dalle meccaniche di *Dungeons & Dragons* (Quinta Edizione).
+**DnDLang** è un linguaggio di programmazione imperativo tipizzato, sviluppato come DSL per modellare e automatizzare scenari di combattimento regolati dalle meccaniche di *Dungeons & Dragons* (Quinta Edizione).
 
 ### Caratteristiche principali
 
-* **Tipizzazione statica** con tipi di dominio dedicati al gioco di ruolo (`HP`, `AC`, `Gold`).
-* **Espressioni stocastiche native**: i dadi poliedrici (da `d3` a `d20`) sono cittadini di prima classe del linguaggio e vengono valutati dinamicamente.
-* **Struttura a macro-sezioni**: separazione rigida e sequenziale tra funzioni (`def`), statistiche dei personaggi (`hero`, `foe`) e blocco esecutivo principale (`quest`).
-* **Costrutti condizionali e iterativi completi**: cicli `while` e flusso condizionato `switch-case` con gestione nativa delle uscite premature (`break`).
-* **Zucchero sintattico di dominio e generico**: operatori per il vantaggio/svantaggio (`adv`, `dis`), tiri contrapposti (`save`, `vs`), assegnamenti composti (`+=`, `-=`, etc.), incremento/decremento (`++`, `--`), operatore ternario e stringhe interpolate (`i"...${expr}..."`).
-* **Gestione degli errori**: controllo dei tipi statico e filosofia Fail-Fast a runtime per arrestare immediatamente il programma in caso di operazioni non permesse (es. divisione per zero).
+* **Tipizzazione con dichiarazione statica**: le variabili non possono cambiare tipo dopo la dichiarazione iniziale, anche se la verifica di compatibilità avviene a runtime prima di ogni legame in memoria.
+* **Espressioni stocastiche native**: i dadi poliedrici da `d3` a `d20` sono costrutti di prima classe del linguaggio, valutati dinamicamente come qualsiasi altra espressione aritmetica.
+* **Struttura a macro-sezioni**: separazione rigida e sequenziale tra dichiarazioni di funzioni (`def`), statistiche dei personaggi (`hero`, `foe`) e blocco esecutivo principale (`quest`).
+* **Costrutti condizionali e iterativi completi**: ciclo `while` e selezione multipla `switch-case` con supporto nativo per le uscite premature (`break`).
+* **Zucchero sintattico di dominio e generico**: operatori per vantaggio e svantaggio (`adv`, `dis`), tiri contrapposti (`save`, `vs`), assegnamenti composti (`+=`, `-=`, `*=`, `/=`), incremento e decremento unitario (`++`, `--`), operatore ternario e stringhe interpolate (`i"...${expr}..."`).
+* **Gestione degli errori Fail-Fast**: alla prima anomalia semantica l'interprete interrompe immediatamente l'esecuzione con un messaggio che riporta la riga incriminata.
 
 ### Contesto applicativo
 
-DnDLang nasce per permettere a Game Master e game designer di eseguire simulazioni statistiche intensive di incontri di combattimento (*encounters*). Il linguaggio consente di caricare le schede dei personaggi e dei mostri, impostare cicli di comportamento e calcolare rapidamente le probabilità di sopravvivenza automatizzando migliaia di lanci di dado in frazioni di secondo, senza dipendere da motori di gioco esterni.
-
+DnDLang nasce per consentire a Game Master e game designer di eseguire simulazioni statistiche intensive di incontri di combattimento. Tramite il linguaggio è possibile caricare le schede dei personaggi, definire cicli di comportamento e calcolare automaticamente migliaia di lanci di dado in frazioni di secondo, senza dipendere da motori di gioco esterni.
 
 ---
 
 ## 2. Guida Rapida
 
-### 2.1 Requisiti d'Installazione ed Esecuzione
-L'interprete di DnDLang è sviluppato in ambiente Java e richiede la presenza dei seguenti strumenti sul sistema ospite:
+### 2.1 Requisiti di installazione ed esecuzione
+
+L'interprete di DnDLang è sviluppato in Java e richiede i seguenti strumenti sul sistema ospite:
+
 - **Java Development Kit (JDK) 17** o superiore.
-- **Apache Maven 3.6+** (utilizzato per la gestione automatica delle dipendenze, l'aggancio del plugin ANTLR4 e la compilazione dei sorgenti).
-- **ANTLR 4.13+** (gestito internamente tramite il file `pom.xml` di Maven).
+- **Apache Maven 3.6+**, usato per la gestione delle dipendenze, il plugin ANTLR4 e la compilazione.
+- **ANTLR 4.13+**, gestito internamente tramite il `pom.xml` di Maven.
 
-### 2.2 Comandi per la Generazione e l'Esecuzione
-Tutti i comandi vanno eseguiti all'interno della directory radice del progetto, dove risiedono il file di grammatica `DnDLang.g4` e il file `pom.xml`.
+### 2.2 Comandi per la generazione e l'esecuzione
 
-1. **Generazione dei sorgenti ANTLR e Compilazione**:
+Tutti i comandi vanno eseguiti dalla directory radice del progetto, dove risiedono `DnDLang.g4` e `pom.xml`.
+
+**1. Generazione dei sorgenti ANTLR e compilazione:**
+
 ```bash
-   mvn clean compile
+mvn clean compile
 ```
 
-Questo comando scarica le librerie necessarie, analizza la grammatica context-free e genera automaticamente i file Java ausiliari (`DnDLangLexer.java`, `DnDLangParser.java`, `DnDLangBaseVisitor.java`) inserendoli nel percorso di build, per poi compilare l'intera applicazione inclusi i file scritti a mano (`Main.java`, `Environment.java`, `DnDInterpreter.java`).
+Il comando scarica le librerie necessarie, analizza la grammatica e genera automaticamente i file Java ausiliari (`DnDLangLexer.java`, `DnDLangParser.java`, `DnDLangBaseVisitor.java`), per poi compilare l'intera applicazione inclusi i sorgenti scritti a mano.
 
-2. **Esecuzione di uno Script Sorgente**:
-Per mandare in esecuzione un programma scritto in DnDLang (estensione `.dnd`), si utilizza il plugin Exec di Maven passando come argomento il percorso relativo del file:
+**2. Esecuzione di uno script sorgente:**
+
 ```bash
 mvn exec:java -Dexec.mainClass="it.univr.dndlang.Main" -Dexec.args="programs/quest.dnd"
-
 ```
 
+### 2.3 Programma d'esempio: HelloWorld esteso
 
-
-### 2.3 Programma d'Esempio: "Hello World" Esteso
-
-Di seguito si riporta una porzione di codice minimale ma esaustiva che illustra l'interazione tra le sezioni del programma, l'uso dei tipi nativi di dominio e le stringhe interpolate:
+Il seguente frammento illustra l'interazione tra sezioni, i tipi nativi di dominio e le stringhe interpolate con formattazione automatica:
 
 ```dnd
 hero: {
@@ -63,13 +65,9 @@ hero: {
 
 quest: {
     print("--- Sessione Inizializzata ---");
-    // Uso del dado nativo d20 e operatore di vantaggio
-    Int iniziativa = adv d20; 
-    
-    // Stringa interpolata con accesso al namespace dell'eroe e formattazione automatica dei tipi
+    Int iniziativa = adv d20;
     print(i"L'avventuriera ${hero.name} (AC: ${hero.ac}) scende nel dungeon con ${hero.borsa}. Iniziativa: ${iniziativa}");
 }
-
 ```
 
 ---
@@ -78,154 +76,270 @@ quest: {
 
 ### 3.1 Struttura di un programma
 
-Un programma DnDLang impone un ordine sequenziale immutabile per le macro-sezioni, formalizzato dalla seguente regola di partenza:
+Un programma DnDLang impone un ordine sequenziale fisso tra le macro-sezioni, formalizzato dalla regola di partenza della grammatica:
 
 ```antlr
 program : functionSection? heroSection? foeSection? questSection EOF ;
-
 ```
 
-* **`functionSection`**: blocco opzionale che contiene esclusivamente le definizioni delle funzioni globali precedute dalla keyword `def`. Ha natura puramente dichiarativa.
-* **`heroSection` (`hero: { ... }`)**: blocco isolato deputato alla definizione delle statistiche dell'eroe protagonista.
-* **`foeSection` (`foe: { ... }`)**: blocco riservato alle statistiche delle creature ostili.
-* **`questSection` (`quest: { ... }`)**: rappresenta il corpo esecutivo centrale (equivalente al metodo `main`). Qui risiedono i cicli di combattimento e la logica algoritmica principale.
+* **`functionSection`**: blocco opzionale che contiene esclusivamente le definizioni di funzioni precedute dalla keyword `def`. È di natura puramente dichiarativa: le funzioni vengono registrate nell'ambiente ma non eseguite.
+* **`heroSection` (`hero: { ... }`)**: blocco deputato alla definizione delle statistiche dell'eroe protagonista. Le variabili dichiarate al suo interno vengono automaticamente registrate con prefisso `hero.` nello scope globale.
+* **`foeSection` (`foe: { ... }`)**: funziona come `heroSection`, con prefisso `foe.`.
+* **`questSection` (`quest: { ... }`)**: il corpo esecutivo centrale, equivalente al metodo `main`. Qui risiedono i cicli di combattimento e la logica principale del programma.
+
+L'ordine è vincolante: le funzioni devono precedere `hero` e `foe` perché queste sezioni possono chiamarle durante l'inizializzazione delle proprie variabili (come avviene in `quest.dnd`, dove `getModifier()` viene invocata dentro `hero:`).
 
 ### 3.2 Tipi di dato
 
-| Tipo | Descrizione | Esempio di valore |
+| Tipo | Descrizione | Esempio |
 | --- | --- | --- |
 | `Int` | Intero a 32 bit con segno | `42`, `-5` |
 | `Float` | Numero in virgola mobile a 64 bit | `3.14`, `-0.5` |
 | `Bool` | Valore booleano | `true`, `false` |
 | `String` | Sequenza letterale di testo | `"Spada Corta"` |
-| `Void` | Tipo speciale non assegnabile (solo per i ritorni di funzione) | - |
-| `HP` | Punti Ferita (sottotipo di `Int`) | `24` |
-| `AC` | Classe Armatura (sottotipo di `Int`) | `15` |
-| `Gold` | Monete d'oro (sottotipo di `Float`) | `50.0` |
+| `Void` | Tipo speciale non assegnabile, usato solo come tipo di ritorno di funzione | — |
+| `HP` | Punti Ferita, compatibile con `Int` | `24` |
+| `AC` | Classe Armatura, compatibile con `Int` | `15` |
+| `Gold` | Monete d'oro, compatibile con `Float` | `50.0` |
 
-I tipi `HP` e `AC` estendono `Int`, mentre `Gold` estende `Float`. Sono compatibili nelle espressioni aritmetiche con i rispettivi tipi primitivi di riferimento attraverso meccanismi di promozione o troncamento implicito.
+I tipi `HP` e `AC` sono semanticamente equivalenti a `Int` a runtime (entrambi rappresentati da `Integer` in Java). Il tipo `Gold` è equivalente a `Float` (rappresentato da `Double`). La distinzione esiste per leggibilità del codice e per la formattazione automatica nelle stringhe interpolate, dove i suffissi ` HP`, ` AC` e ` gp` vengono aggiunti automaticamente.
 
-### 3.3 Token dei Dadi Poliedrici e Operatori di Dominio
+### 3.3 Token dei dadi poliedrici e operatori di dominio
 
-La gestione stocastica si basa su token dedicati che mappano i dadi tradizionali:
-`d20`, `d12`, `d10`, `d8`, `d6`, `d4`, `d3`.
+I dadi tradizionali sono token lessicali di prima classe: `d20`, `d12`, `d10`, `d8`, `d6`, `d4`, `d3`. Vengono valutati come espressioni atomiche in qualsiasi contesto aritmetico, ad esempio `3 * d6 + 4`.
 
-Vengono valutati come espressioni atomiche all'interno di qualsiasi operazione aritmetica (es. `3 * d6 + 4`). I costrutti speciali per i tiri includono:
+Gli operatori di dominio aggiuntivi sono:
 
-* **`adv` / `dis`**: modificatori prefissi applicabili alle espressioni dei dadi per implementare il *Vantaggio* (lancio di due dadi e selezione del valore massimo) o lo *Svantaggio* (selezione del valore minimo).
-* **`save` / `vs`**: operatori infissi binari. `expr1 save expr2` verifica se il tiro supera o uguaglia una determinata Classe di Difficoltà (CD). `expr1 vs expr2` modella una prova contrapposta dove il primo elemento deve superare strettamente il secondo.
+* **`adv` / `dis`**: modificatori prefissi applicabili a qualsiasi dado. `adv d20` lancia due d20 e restituisce il valore massimo (*Vantaggio*); `dis d20` restituisce il minimo (*Svantaggio*). Entrambi stampano a video il dettaglio dei due lanci.
+* **`save` / `vs`**: operatori infissi binari che restituiscono un `Bool`. `expr1 save expr2` verifica se il tiro supera o uguaglia la Classe di Difficoltà. `expr1 vs expr2` modella una prova contrapposta in cui il primo operando deve superare *strettamente* il secondo.
 
+### 3.4 Dichiarazione di variabile e assegnamento
+
+Le variabili si dichiarano con tipo esplicito e inizializzatore obbligatorio:
+
+```dnd
+Int forza = 16;
+HP vita = 35;
+Gold borsa = 50.0;
+```
+
+Gli assegnamenti semplici e composti operano su variabili già dichiarate:
+
+```dnd
+forza = 18;
+vita -= 5;     // equivale a vita = vita - 5
+borsa += 10.0;
+```
+
+### 3.5 Costrutti di controllo del flusso
+
+**If-else:**
+```dnd
+if (txc >= foe.ac) {
+    foe.hp -= danno;
+} else {
+    print("Mancato!");
+}
+```
+
+**While:**
+```dnd
+while (hero.hp > 0 && foe.hp > 0) {
+    // corpo del ciclo
+}
+```
+
+**Switch-case:** ogni `case` è isolato, senza fall-through. Appena viene trovata una corrispondenza, il blocco relativo viene eseguito e lo switch termina. Il `default` è opzionale.
+
+```dnd
+switch (txc) {
+    case 1:  { print("Fallimento Critico!"); }
+    case 20: { print("Successo Critico!"); }
+    default: { print("Risultato normale."); }
+}
+```
+
+**Break:** interrompe il ciclo `while` corrente. Usarlo fuori da un ciclo produce un errore runtime.
+
+### 3.6 Funzioni
+
+Le funzioni si dichiarano nella `functionSection` con la keyword `def`, specificando il tipo di ritorno, il nome, i parametri e il corpo:
+
+```dnd
+def Int getModifier(Int score) {
+    return (score - 10) / 2;
+}
+```
+
+Il tipo `Void` è ammesso come tipo di ritorno ma non come tipo di parametro. Le funzioni possono richiamare se stesse ricorsivamente.
+
+### 3.7 Zucchero sintattico
+
+**Incremento e decremento unitario:**
+
+```dnd
+round++;   // post-incremento: restituisce il vecchio valore, poi incrementa
+++round;   // pre-incremento: incrementa, poi restituisce il nuovo valore
+```
+
+**Operatore ternario:**
+
+```dnd
+String esito = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
+```
+
+**Stringhe interpolate:** una stringa preceduta da `i` permette di incorporare espressioni arbitrarie tra `${}`. Per le variabili di tipo `HP`, `AC` e `Gold` viene aggiunto automaticamente il suffisso di tipo.
+
+```dnd
+print(i"HP Eroe: ${hero.hp} | Oro: ${hero.gold}");
+// Output: HP Eroe: 35 HP | Oro: 50.0 gp
+```
+
+### 3.8 Limiti sintattici
+
+* `Void` non è ammesso come tipo di parametro di funzione.
+* Non è ammessa la ridichiarazione di una funzione con lo stesso nome.
+* `break` è valido solo all'interno di un ciclo `while`; usarlo in un blocco `hero:`, `foe:` o fuori da un ciclo produce un errore runtime immediato.
+* La dot-notation (`hero.hp`, `foe.ac`) è riservata ai namespace delle sezioni struct: non è possibile definire variabili con un punto nel nome al di fuori di quelle sezioni.
 
 ---
 
 ## 4. Semantica
 
-### 4.1 Scelte Progettuali Core
+### 4.1 Scelte progettuali principali
 
-Le scelte semantiche alla base di DnDLang mirano a massimizzare la prevedibilità del codice pur gestendo l'intrinseca volatilità dei lanci di dado:
+* **Dichiarazione del tipo**: il tipo di una variabile è dichiarato esplicitamente al momento della sua creazione e non può cambiare per tutta la durata del programma. La verifica di compatibilità tra il valore calcolato e il tipo dichiarato avviene a runtime, prima di ogni legame in memoria. Non esiste una fase di analisi statica separata prima dell'esecuzione: DnDLang è un interprete tree-walking puro.
 
-* **Controllo dei Tipi**: Statico. Le variabili non possono mutare il tipo associato al momento della loro dichiarazione iniziale. Il type checking avviene a runtime in modo rigoroso prima di ogni legame in memoria.
-* **Visibilità (Scoping)**: Il linguaggio adotta uno scoping di tipo *lessicale* e gerarchico. Ogni blocco racchiuso da parentesi graffe `{ ... }` genera un nuovo ambiente isolato. Le variabili dichiarate nei blocchi interni occultano temporaneamente quelle omonime dei blocchi esterni (*shadowing*).
-* **Namespace Autogenerati**: I blocchi `hero` e `foe` applicano automaticamente una semantica di incapsulamento. Tutte le variabili dichiarate al loro interno vengono registrate nell'ambiente globale anteponendo rispettivamente il prefisso `hero.` e `foe.`. Questo consente di accedervi liberamente dall'interno della `questSection` simulando una struttura a record (es. `hero.hp`).
-* **Valutazione delle Espressioni**: *Eager* (ansiosa) per tutte le espressioni aritmetiche, chiamate di funzione e stringhe interpolate.
-* **Valutazione Logica**: Nonostante la grammatica supporti gli operatori logici standard `&&` e `||`, l'interprete esegue una valutazione completa dei due rami per garantire che eventuali lanci di dado presenti nel secondo operando vengano computati stabilmente, preservando la coerenza dello stato stocastico del gioco.
-* **Passaggio dei Parametri**: Rigorosamente *Call-by-Value* (per valore). Le modifiche effettuate sui parametri formali all'interno di una funzione non alterano in alcun modo le variabili originarie passate come argomenti nel blocco chiamante.
+* **Visibilità (scoping lessicale)**: ogni blocco `{ ... }` apre un nuovo scope isolato. Le variabili dichiarate in un blocco interno non sopravvivono alla chiusura del blocco. Una variabile può oscurare temporaneamente una variabile omonima di un blocco esterno (*shadowing*): durante l'esecuzione del blocco interno il lookup trova quella locale; all'uscita torna visibile quella esterna.
 
-### 4.2 Gerarchia dei Tipi e Strategie di Conversione (Coercizione)
+* **Namespace autogenerati per `hero` e `foe`**: i blocchi `hero:` e `foe:` non aprono un nuovo scope. Le variabili dichiarate al loro interno vengono registrate direttamente nello scope globale con prefisso automatico (`hero.nome`, `foe.hp`, ecc.), simulando una struttura a record accessibile da tutta la `questSection`.
 
-Le conversioni numeriche implicite (coercizione) seguono le catene di sottotipaggio:
+* **Valutazione delle espressioni**: tutte le espressioni aritmetiche, le chiamate di funzione e le stringhe interpolate vengono valutate in modo *eager* (ansioso), cioè immediatamente al momento dell'incontro nel flusso di esecuzione.
 
-$$\text{HP} \subsetneq \text{Int} \subsetneq \text{Float}$$
-$$\text{AC} \subsetneq \text{Int} \subsetneq \text{Float}$$
-$$\text{Int} \subsetneq \text{Gold} \subsetneq \text{Float}$$
-    
-Qualsiasi valore decimale assegnato a variabili di tipo `Int`, `HP` o `AC` viene automaticamente convertito tramite troncamento della parte decimale. Il tipo `Int` viene promosso implicitamente verso `Gold` o `Float`. Le stringhe e i booleani sono totalmente isolati: non è ammessa alcuna forma di conversione implicita o esplicita con i tipi numerici. Gli operatori logici `&&` e `||` eseguono una valutazione completa di entrambi i rami per garantire la coerenza dello stato stocastico dei dadi.
+* **Valutazione logica non short-circuit**: gli operatori `&&` e `||` valutano sempre entrambi gli operandi, anche quando il risultato è già determinabile dal primo. Questa scelta è deliberata: in un linguaggio orientato alla simulazione stocastica, è fondamentale che i dadi nel secondo operando vengano sempre lanciati, per preservare la coerenza dello stato di gioco. Ad esempio, nell'espressione `hero.hp > 0 && d20 > 5`, il dado viene lanciato indipendentemente dal valore di `hero.hp`.
+
+* **Passaggio dei parametri**: rigorosamente *call-by-value*. Gli argomenti vengono valutati nello scope del chiamante prima di entrare nella funzione, e i parametri formali sono copie locali. Modificare un parametro dentro una funzione non altera la variabile originale.
+
+### 4.2 Gerarchia dei tipi e coercizione implicita
+
+DnDLang supporta un insieme limitato di conversioni implicite, applicate automaticamente dall'interprete tramite la funzione `coerceToDeclaredType` al momento dell'assegnamento o del passaggio di un argomento.
+
+Le relazioni di compatibilità implementate sono le seguenti:
+
+$$\text{HP} \subsetneq \text{Int} \qquad \text{AC} \subsetneq \text{Int} \qquad \text{Int} \subsetneq \text{Gold}$$
+
+In pratica:
+
+* Un valore `Double` assegnato a una variabile `Int`, `HP` o `AC` viene convertito tramite **troncamento verso zero** (la parte decimale viene scartata: `3.9` diventa `3`, `-3.9` diventa `-3`).
+* Un valore `Integer` assegnato a una variabile `Gold` viene **promosso** a `Double`.
+* Il tipo `Float` non partecipa ad alcuna catena di promozione implicita da `Int`: un valore intero assegnato a una variabile `Float` produce un errore di tipo incompatibile.
+* `Bool` e `String` sono completamente isolati: non esiste alcuna forma di conversione implicita o esplicita tra questi tipi e i tipi numerici.
 
 ### 4.3 Gestione degli errori a runtime
 
-Il linguaggio adotta una filosofia difensiva definita **Fail-Fast**.L'interprete non assegna valori di fallback o di default, ma provoca l'arresto immediato del thread esecutivo in presenza di anomalie semantiche, tracciandole tramite la classe custom `DnDLangError`. Gli errori intercettati includono::
+Il linguaggio adotta una filosofia **Fail-Fast**: alla prima anomalia rilevata l'interprete lancia una `DnDLangError` (una `RuntimeException` custom con numero di riga), che viene catturata in `Main.java` e presentata su `stderr` prima di terminare il processo con exit code 1. Non vengono assegnati valori di fallback né ignorati gli errori.
 
-* Utilizzo o assegnamento di variabili non preventivamente dichiarate nello scope corrente o superiore.
-* Errori aritmetici irreversibili, specificamente la divisione o il calcolo del modulo per zero (es. `x / 0`).
-* Discrepanza tra il numero di argomenti passati a una funzione in fase di chiamata e i parametri previsti dalla firma della stessa.
-* Incompatibilità di tipo insanabile durante un assegnamento o il passaggio di un parametro.
+Gli errori intercettati comprendono:
 
-### 4.4 Formalizzazione della Semantica Operazionale (Regole di Transizione)
+* Utilizzo o assegnamento di variabili non dichiarate nello scope corrente o in quelli superiori.
+* Divisione o modulo per zero, sia con `/` che con `/=`.
+* Numero di argomenti passati a una funzione diverso da quello atteso dalla firma.
+* Incompatibilità di tipo non risolvibile tramite coercizione (es. assegnare un `Bool` a un `Int`).
+* Funzione non-`Void` che termina senza eseguire un'istruzione `return`.
+* Funzione `Void` che tenta di restituire un valore.
+* Utilizzo di `break` fuori da un ciclo `while` (incluso l'interno di sezioni `hero:` e `foe:`).
+* Applicazione degli operatori `&&`, `||`, `!` a operandi non booleani.
+* Applicazione dell'operatore unario `-` a un valore non numerico.
+* Chiamata a una funzione non dichiarata.
+* Ridichiarazione di una funzione con lo stesso nome.
 
-Di seguito alcune regole di transizione della semantica operazionale strutturata (SOS) di DnDLang, dove la memoria è definita come una funzione $\sigma: \text{Id} \rightarrow \text{Val}$.
+### 4.4 Formalizzazione della semantica operazionale
 
-**Regola dell'Assegnamento Semplice (`=`)**:
-Quando viene valutato un comando di assegnamento, l'espressione a destra viene ridotta a un valore atomico $v$, e la memoria viene aggiornata associando stabilmente quel valore all'identificatore $id$.
+Di seguito alcune regole di transizione della semantica operazionale strutturata (SOS) di DnDLang, dove lo stato $\sigma : \text{Id} \rightarrow \text{Val}$ mappa identificatori a valori.
 
+**Assegnamento semplice:**
 
-$$\text{Assign} \quad \frac{\langle e, \sigma \rangle \rightarrow v}{\langle id = e;, \sigma \rangle \rightarrow \sigma[id \mapsto v]}$$
+$$\text{Assign} \quad \frac{\langle e,\, \sigma \rangle \rightarrow v}{\langle \texttt{id = e;},\, \sigma \rangle \rightarrow \sigma[\texttt{id} \mapsto v]}$$
 
-**Regola dell'Assegnamento Composto Additivo (`+=`)**:
-Il comando recupera il valore corrente associato all'identificatore, valuta l'espressione a destra ed esegue la somma algebrica prima di riassegnare il valore finale.
+**Assegnamento composto additivo (`+=`):**
 
+$$\text{Assign-Compound} \quad \frac{\sigma(\texttt{id}) = v_1 \quad \langle e,\, \sigma \rangle \rightarrow v_2 \quad v_3 = v_1 + v_2}{\langle \texttt{id += e;},\, \sigma \rangle \rightarrow \sigma[\texttt{id} \mapsto v_3]}$$
 
-$$\text{Assign-Compound} \quad \frac{\sigma(id) = v_1 \quad \langle e, \sigma \rangle \rightarrow v_2 \quad v_3 = v_1 + v_2}{\langle id \ \mathtt{+=} \ e;, \sigma \rangle \rightarrow \sigma[id \mapsto v_3]}$$
+**While — condizione falsa:**
 
-**Regola dei Tiri Speciali — Tiro Salvezza (`save`)**:
-L'operatore binario `save` confronta il risultato numerico ottenuto a sinistra (solitamente comprensivo di un lancio di dado) con una soglia fissa a destra (Classe di Difficoltà). Il successo è decretato dal superamento o dall'uguaglianza matematica.
+$$\text{While-False} \quad \frac{\langle \textit{cond},\, \sigma \rangle \rightarrow \texttt{false}}{\langle \texttt{while(}\textit{cond}\texttt{) \{ body \}},\, \sigma \rangle \rightarrow \sigma}$$
 
+**While — condizione vera:**
 
-$$\text{Save-Success} \quad \frac{\langle e_1, \sigma \rangle \rightarrow v_1 \quad \langle e_2, \sigma \rangle \rightarrow v_2 \quad v_1 \ge v_2}{\langle e_1 \ \mathtt{save} \ e_2, \sigma \rangle \rightarrow \text{true}}$$
+$$\text{While-True} \quad \frac{\langle \textit{cond},\, \sigma \rangle \rightarrow \texttt{true} \quad \langle \textit{body},\, \sigma \rangle \rightarrow \sigma' \quad \langle \texttt{while(}\textit{cond}\texttt{) \{ body \}},\, \sigma' \rangle \rightarrow \sigma''}{\langle \texttt{while(}\textit{cond}\texttt{) \{ body \}},\, \sigma \rangle \rightarrow \sigma''}$$
 
-$$\text{Save-Failure} \quad \frac{\langle e_1, \sigma \rangle \rightarrow v_1 \quad \langle e_2, \sigma \rangle \rightarrow v_2 \quad v_1 < v_2}{\langle e_1 \ \mathtt{save} \ e_2, \sigma \rangle \rightarrow \text{false}}$$
+**Chiamata di funzione con return (call-by-value):**
 
-**Regola del Lancio con Vantaggio (`adv`)**:
-La valutazione di un dado prefissato da `adv` comporta l'esecuzione indipendente di due campionamenti stocastici (lanci) sulla medesima funzione di distribuzione discreta $[1, \text{sides}]$. Il valore finale risultante corrisponde al massimo matematico tra i due esiti.
+$$\text{FunCall} \quad \frac{\text{argomenti valutati in } \sigma \quad \sigma_f = \{p_1 \mapsto v_1, \ldots, p_n \mapsto v_n\} \quad \langle \textit{body},\, \sigma \cup \sigma_f \rangle \;\uparrow\; \texttt{ReturnException}(v)}{\langle f(\textit{args}),\, \sigma \rangle \rightarrow v}$$
 
+La freccia $\uparrow$ indica che l'esecuzione del corpo viene interrotta da una `ReturnException`, il cui valore viene estratto e restituito al chiamante.
 
-$$\text{Dice-Advantage} \quad \frac{\text{roll}_1 = \text{random}(1, \text{sides}) \quad \text{roll}_2 = \text{random}(1, \text{sides}) \quad v = \max(\text{roll}_1, \text{roll}_2)}{\langle \mathtt{adv} \ \text{diceOnly}, \sigma \rangle \rightarrow v}$$
+**Tiro salvezza:**
+
+$$\text{Save-Success} \quad \frac{\langle e_1,\, \sigma \rangle \rightarrow v_1 \quad \langle e_2,\, \sigma \rangle \rightarrow v_2 \quad v_1 \ge v_2}{\langle e_1 \;\texttt{save}\; e_2,\, \sigma \rangle \rightarrow \texttt{true}}$$
+
+$$\text{Save-Failure} \quad \frac{\langle e_1,\, \sigma \rangle \rightarrow v_1 \quad \langle e_2,\, \sigma \rangle \rightarrow v_2 \quad v_1 < v_2}{\langle e_1 \;\texttt{save}\; e_2,\, \sigma \rangle \rightarrow \texttt{false}}$$
+
+**Lancio con vantaggio:**
+
+$$\text{Dice-Advantage} \quad \frac{r_1 = \text{random}(1, \textit{sides}) \quad r_2 = \text{random}(1, \textit{sides}) \quad v = \max(r_1, r_2)}{\langle \texttt{adv}\; \textit{diceOnly},\, \sigma \rangle \rightarrow v}$$
 
 ---
 
 ## 5. Implementazione
 
-### 5.1 Architettura del Visitor ed Esplorazione dell'AST
+### 5.1 Architettura del Visitor e visita dell'AST
 
-L'architettura del sistema si basa sulle classi generate da ANTLR4. Il nucleo operativo è rappresentato dalla classe `DnDInterpreter`, la quale estende `DnDLangBaseVisitor<Object>`. L'interprete esegue un'esplorazione diretta e ricorsiva dell'Abstract Syntax Tree (AST) generato dal Parser durante l'analisi del testo. Ciascun metodo `visit...` della classe è responsabile della valutazione semantica di uno specifico nodo dell'albero, restituendo un oggetto Java nativo (`Integer`, `Double`, `Boolean` o `String`) come risultato.
+Il nucleo dell'interprete è la classe `DnDInterpreter`, che estende `DnDLangBaseVisitor<Object>` generata da ANTLR4. Il tipo generico `Object` è necessario perché i diversi nodi dell'albero restituiscono tipi Java eterogenei: `Integer`, `Double`, `Boolean`, `String` o `null`. Non esiste un tipo `Value` wrapper: i valori circolano come `Object` e vengono esaminati con `instanceof` nei punti in cui il tipo è rilevante.
 
-### 5.2 Gestione degli Scope e Record di Attivazione
+L'interprete visita ricorsivamente l'AST in post-ordine: prima vengono valutati i sottoalberi figli, poi il nodo padre usa i loro risultati per produrre il proprio. Ad esempio, per l'espressione `d20 + strMod`, il visitor visita prima il nodo `D20Expr` (che lancia il dado e restituisce un `Integer`), poi il nodo `IdExpr` per `strMod` (che legge il valore dall'ambiente), e infine `AddSubExpr` somma i due risultati.
 
-La gestione della memoria e della visibilità è demandata alla classe `Environment.java`. Questa struttura implementa una pila di ambienti organizzata gerarchicamente tramite una classe interna ricorsiva chiamata `Scope`:
+### 5.2 Gestione degli scope e tabella dei simboli
+
+La memoria di esecuzione è gestita da `Environment.java`, che implementa una pila di scope tramite la classe interna `Scope`:
 
 ```java
 private static class Scope {
-    final Scope enclosing; // Riferimento allo scope immediatamente più esterno
+    final Scope enclosing; // riferimento allo scope immediatamente esterno
     final Map<String, VariableSymbol> variables = new HashMap<>();
-    final Map<String, FunctionSymbol> functions = new HashMap<>();
+    final Map<String, FunctionSymbol>  functions  = new HashMap<>();
 }
-
 ```
 
-All'ingresso di un blocco di codice (`visitBlock`), viene invocato il metodo `env.enterBlock()`, il quale istanzia un nuovo `Scope` agganciando quello corrente come padre (`enclosing`). Alla fine del blocco, `env.exitBlock()` ripristina il puntatore al padre, distruggendo implicitamente il record di attivazione locale e liberando la memoria da variabili volatili. La risoluzione degli identificatori avviene risalendo la catena dei padri fino allo scope globale: questo garantisce la corretta implementazione dello scoping lessicale.
+All'ingresso di ogni blocco `visitBlock()` invoca `env.enterBlock()`, che istanzia un nuovo `Scope` collegandolo al corrente come padre. All'uscita, `env.exitBlock()` ripristina il puntatore al padre, liberando implicitamente le variabili locali. La risoluzione degli identificatori risale la catena `enclosing` fino allo scope globale.
 
-### 5.3 Difficoltà Tecniche e Soluzioni Adottate
+Le funzioni vengono registrate nello scope globale da `visitFunctionDecl()` al momento della visita della `functionSection`. Per questo è sufficiente che siano dichiarate prima della loro chiamata nell'ordine di esecuzione del programma, non necessariamente prima nel testo sorgente — anche se la struttura rigida del linguaggio impone l'uno e l'altro.
 
-#### A. Interruzione Prematura del Flusso (`return` e `break`)
+Le sezioni `hero:` e `foe:` usano un meccanismo diverso: non aprono un nuovo scope ma dichiarano le proprie variabili direttamente nello scope globale con un prefisso anteposto (`hero.nome`, `foe.hp`). Questo consente alla `questSection` di accedervi come se fossero campi di un record globale.
 
-Poiché il Visitor esplora ricorsivamente l'albero tramite chiamate a metodi Java, un semplice comando di return dentro un blocco nidificato interromperebbe solo il metodo del Visitor locale e non la funzione intera.
+### 5.3 Difficoltà tecniche e soluzioni adottate
 
-* **Soluzione per il `return` **: È stata sfruttata l'infrastruttura dei segnali della Java Virtual Machine tramite il lancio di un'eccezione di controllo personalizzata, denominata `ReturnException`. Quando l'interprete incontra un `returnStmt`, valuta l'eventuale espressione associata e lancia immediatamente la `ReturnException`. Il metodo `visitFunctionCallExpr`, che si trova al vertice della chiamata, racchiude l'attivazione della funzione all'interno di un blocco `try-catch`. Intercettando l'eccezione, estrae il valore racchiuso, ripristina l'ambiente ed esce in modo pulito.
-* **Soluzione per il `break`**: Per il comando `break` nei cicli `while` e nei costrutti `switch`, è stato adottato un flag booleano interno all'interprete chiamato `isBreaking`. Quando viene rilevato un `breakStmt`, il flag viene posto a `true`. Tutti i cicli esecutivi di blocco controllano questo flag prima di passare al comando successivo; se attivo, interrompono l'iterazione e propagano l'uscita fino al gestore del ciclo primario, che provvederà a resettare il flag a `false`.
+#### A. Interruzione prematura del flusso: `return` e `break`
 
-#### B. Parsing Dinamico e Sotto-Alberi per Stringhe Interpolate
+Il Visitor esplora l'AST tramite chiamate Java ricorsive. Un semplice `return` dentro un blocco annidato interromperebbe solo il metodo Java locale, non la funzione DnDLang intera.
 
-L'implementazione delle stringhe interpolate `i"..."` richiedeva la capacità di valutare qualsiasi espressione complessa inserita all'interno dei delimitatori `${}` direttamente nel contesto corrente.
-Il metodo visitIStringExpr estrae il testo racchiuso tramite espressioni regolari e, per ciascun frammento individuato, istanzia al volo un mini-flusso ANTLR completo (CharStream -> Lexer -> TokenStream -> Parser). Viene isolato il nodo sintattico expr e viene invocato ricorsivamente il Visitor principale (this.visit(exprCtx)) sul sotto-albero appena generato.
+**Soluzione per `return`**: quando l'interprete incontra un `returnStmt`, valuta l'espressione associata e lancia una `ReturnException`. Questa eccezione è costruita con `super(null, null, false, false)` per disabilitare la creazione dello stack trace Java (overhead inutile, dato che non è un errore). Il metodo `visitFunctionCallExpr`, che si trova al vertice della chiamata, racchiude l'esecuzione del corpo in un blocco `try-catch-finally`: il `catch` intercetta la `ReturnException`, ne estrae il valore e verifica la compatibilità con il tipo di ritorno dichiarato; il `finally` garantisce che `env.exitBlock()` e il ripristino di `currentReturnType` avvengano sempre, anche in presenza di eccezioni impreviste. Questa struttura è ciò che rende la ricorsione corretta: ogni invocazione di `visitFunctionCallExpr` salva e ripristina il proprio `currentReturnType` in modo indipendente.
+
+**Soluzione per `break`**: il `break` nei cicli `while` e nei costrutti `switch` è implementato con il flag booleano `isBreaking` nell'interprete. Quando viene incontrato un `breakStmt`, il flag viene posto a `true`. Il metodo `visitBlock()` controlla il flag dopo ogni istruzione e interrompe il proprio loop se attivo, propagando così l'uscita verso l'esterno. Il metodo `visitWhileStmt()` consuma il flag (lo riporta a `false`) dopo aver rilevato il break, impedendo che si propaghi oltre il ciclo. Lo stesso fa `visitSwitchStmt()` dopo l'esecuzione del case corrispondente. Tentare un `break` dentro `hero:` o `foe:`, dove non c'è né un `while` né uno `switch` a consumarlo, viene intercettato da `visitDeclarativeBlock()` che lancia una `DnDLangError`.
+
+#### B. Parsing dinamico delle stringhe interpolate
+
+Le stringhe interpolate `i"..."` richiedono la valutazione di espressioni arbitrarie nel contesto corrente. Il metodo `visitIStringExpr` estrae ogni frammento `${...}` tramite espressione regolare e, per ciascuno, istanzia al volo una pipeline ANTLR completa (`CharStream` → `Lexer` → `TokenStream` → `Parser`). Viene isolato il nodo `expr` e su di esso viene invocato ricorsivamente `this.visit(exprCtx)`, che opera con l'`Environment` corrente e quindi vede tutte le variabili dichiarate fino a quel punto. Dopo la valutazione, se l'espressione corrisponde a una variabile di tipo `HP`, `AC` o `Gold`, il suffisso appropriato (` HP`, ` AC`, ` gp`) viene aggiunto automaticamente al risultato.
 
 ---
 
-## 6. Programmi di Test e Output Attesi
+## 6. Programmi di test e output attesi
 
 ### 6.1 `hello.dnd`
 
-Questo script convalida l'autogenerazione dei namespace e l'estrazione corretta dei tipi di dominio all'interno delle stringhe interpolate.
+Verifica l'autogenerazione dei namespace `hero.*` e la formattazione automatica dei tipi di dominio nelle stringhe interpolate.
 
-**Codice Sorgente**:
+**Codice sorgente:**
 
 ```dnd
 hero: {
@@ -241,22 +355,23 @@ quest: {
     print(prova);
     print(i"Eroe: ${hero.name} | Class: ${hero.class} | HP: ${hero.hp} | AC: ${hero.ac} | Gold: ${hero.gold}");
 }
-
 ```
 
-**Output Atteso a Video**:
-
-```text
-[Valore numerico casuale tra 1 e 20 derivante dal lancio con vantaggio]
-Eroe: Aelar | Class: Monk | 24 HP | 15 AC | 50.0 gp
+**Output atteso:**
 
 ```
+ > [Vantaggio] Lanciati X e Y -> Tengo Z
+Z
+Eroe: Aelar | Class: Monk | HP: 24 HP | AC: 15 AC | Gold: 50.0 gp
+```
+
+*(Dove X, Y e Z sono valori casuali tra 1 e 20. Il suffisso di tipo è aggiunto automaticamente dall'interprete per le variabili HP, AC e Gold.)*
 
 ### 6.2 `errors.dnd`
 
-Script di controllo per verificare la robustezza del meccanismo Fail-Fast in presenza di operazioni matematiche illegali.
+Verifica la robustezza del meccanismo Fail-Fast in presenza di una divisione per zero.
 
-**Codice Sorgente**:
+**Codice sorgente:**
 
 ```dnd
 hero: {
@@ -267,31 +382,27 @@ quest: {
     print("--- Test Fallimento Critico (Fail-Fast) ---");
     Int x = 10;
     Int y = 0;
-    
     print("Tentativo di divisione per zero... L'interprete deve bloccarsi immediatamente!");
     Int z = x / y;
-    
     print("Se vedi questa scritta, il Fail-Fast NON sta funzionando!");
 }
-
 ```
 
-**Output Atteso su Stderr**:
+**Output atteso su stderr:**
 
-```text
+```
 --- Test Fallimento Critico (Fail-Fast) ---
 Tentativo di divisione per zero... L'interprete deve bloccarsi immediatamente!
 Errore runtime non gestito alla riga 10: divisione per zero
-
 ```
 
-*(Nota: Il programma termina con exit code 1 immediatamente alla riga dell'errore, impedendo la stampa finale).*
+Il programma termina con exit code 1 alla riga dell'errore. L'ultima `print` non viene mai raggiunta.
 
 ### 6.3 `quest.dnd`
 
-Simulazione intensiva di un combattimento strutturato che mette alla prova le funzioni con tipo di ritorno, l'operatore ternario, le espressioni dei dadi nativi e il costrutto condizionale `switch-case` con gestione del colpo critico (caso 20) e del fallimento critico (caso 1).
+Simulazione di un combattimento strutturato che esercita le funzioni con tipo di ritorno, l'operatore ternario, i dadi nativi e il costrutto `switch-case` con gestione del colpo critico (dado naturale 20) e del fallimento critico (dado naturale 1).
 
-**Codice Sorgente**:
+**Codice sorgente:**
 
 ```dnd
 def Int getModifier(Int score) {
@@ -306,7 +417,7 @@ def Int calcDamage(Int dieRoll, Int mod, Bool isCrit) {
 hero: {
     String name = "Garrick";
     Int strength = 16;
-    Int strMod = getModifier(strength); 
+    Int strMod = getModifier(strength);
     HP hp = 35;
     AC ac = 16;
 }
@@ -321,12 +432,13 @@ foe: {
 
 quest: {
     print(i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---");
+    print(i"Modificatore di Forza Eroe: ${hero.strMod}");
+    print(i"Modificatore di Forza Nemico: ${foe.strMod}");
     Int round = 1;
     while (hero.hp > 0 && foe.hp > 0) {
         print(i"\n--- ROUND ${round} ---");
         Int txc = d20;
         print(i"${hero.name} lancia per colpire. Dado naturale: ${txc}");
-        
         switch (txc) {
             case 1: {
                 print("Fallimento Critico! Ti sbilanci e subisci danni.");
@@ -348,7 +460,6 @@ quest: {
                 }
             }
         }
-
         if (foe.hp > 0) {
             Int txcFoe = d20;
             if (txcFoe + foe.strMod >= hero.ac) {
@@ -365,37 +476,37 @@ quest: {
     String finale = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
     print(i"\nEsito finale della Quest: ${finale} al round ${round - 1}!");
 }
-
 ```
 
-**Output Atteso (Esempio di Tracciato di Gioco Dinamico)**:
+**Esempio di tracciato di gioco:**
 
-```text
+```
 --- INIZIO SCONTRO: Garrick VS Goblin Capo ---
+Modificatore di Forza Eroe: 3
+Modificatore di Forza Nemico: 1
 
 --- ROUND 1 ---
 Garrick lancia per colpire. Dado naturale: 14
-Colpito! Inflitti 7 danni. HP Mostro: 18
-Il Goblin Capo contrattacca e ti colpisce! Subisci 4 danni. HP Eroe: 31
+Colpito! Inflitti 7 danni. HP Mostro: 18 HP
+Il Goblin Capo contrattacca e ti colpisce! Subisci 4 danni. HP Eroe: 31 HP
 
 --- ROUND 2 ---
 Garrick lancia per colpire. Dado naturale: 20
-SUCCESSO CRITICO! Inflitti 15 danni devastanti. HP Mostro: 3
+SUCCESSO CRITICO! Inflitti 15 danni devastanti. HP Mostro: 3 HP
 Il Goblin Capo manca il bersaglio.
 
 --- ROUND 3 ---
 Garrick lancia per colpire. Dado naturale: 11
-Colpito! Inflitti 6 danni. HP Mostro: -3
+Colpito! Inflitti 6 danni. HP Mostro: -3 HP
 
 Esito finale della Quest: VITTORIA al round 3!
-
 ```
 
 ### 6.4 `session.dnd`
 
-Programma avanzato volto a testare lo stack dei record di attivazione della memoria tramite una **funzione ricorsiva** complessa (`furiaBerserker`) in cui la condizione di terminazione (caso base) dipende interamente dall'esito di un'espressione stocastica combinata.
+Programma avanzato che mette alla prova lo stack dei record di attivazione tramite la funzione ricorsiva `furiaBerserker`, il cui caso base dipende dall'esito di un'espressione stocastica.
 
-**Codice Sorgente**:
+**Codice sorgente:**
 
 ```dnd
 def Int furiaBerserker(Int bonusTxC, Int classeArmatura) {
@@ -406,7 +517,7 @@ def Int furiaBerserker(Int bonusTxC, Int classeArmatura) {
         return danno + furiaBerserker(bonusTxC - 2, classeArmatura);
     } else {
         print(i" > La catena si spezza. L'attacco fallisce (TxC: ${txc}).");
-        return 0; 
+        return 0;
     }
 }
 
@@ -414,31 +525,28 @@ hero: {
     String name = "Tordek il Barbaro";
     HP hp = 50;
     AC ac = 16;
-    Int strMod = 6; 
+    Int strMod = 6;
 }
 
 foe: {
     String name = "Golem di Carne";
     HP hp = 80;
-    AC ac = 14;     
+    AC ac = 14;
 }
 
 quest: {
     print(i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---");
     Int round = 1;
-
     while (hero.hp > 0 && foe.hp > 0) {
         print(i"\n--- ROUND ${round} ---");
         print(i"${hero.name} entra in Ira e scatena la Furia Berserker!");
-        
         Int danniTotali = furiaBerserker(hero.strMod, foe.ac);
         if (danniTotali > 0) {
             foe.hp -= danniTotali;
-            print(i"Risultato: La Furia ha inflitto un totale di ${danniTotali} danni! HP Golem: ${foe.hp}");
+            print(i"Risultato: La Furia ha inflitto un totale di ${danniTotali} danni in questo turno! HP Golem: ${foe.hp}");
         } else {
             print("Risultato: Tordek manca clamorosamente il primo colpo.");
         }
-        
         if (foe.hp > 0) {
             print(i"Il ${foe.name} contrattacca con uno schianto possente!");
             Int txcFoe = d20 + 4;
@@ -455,17 +563,16 @@ quest: {
     print("----------------------------------------------------------------------");
     if (hero.hp > 0) {
         Gold tesoro = 500.0;
-        print(i"Il Golem crolla a terra. Vittoria! Guadagni ${tesoro} gp.");
+        print(i"Il Golem crolla a terra. Vittoria! Guadagni ${tesoro}.");
     } else {
         print("La resistenza del Golem era troppa. Tordek cade in battaglia.");
     }
 }
-
 ```
 
-**Output Atteso (Esempio di Tracciato di Gioco Dinamico)**:
+**Esempio di tracciato di gioco:**
 
-```text
+```
 --- INIZIO SCONTRO: Tordek il Barbaro VS Golem di Carne ---
 
 --- ROUND 1 ---
@@ -473,15 +580,14 @@ Tordek il Barbaro entra in Ira e scatena la Furia Berserker!
  > Colpo a segno! (TxC: 22). Inflitti 5 danni.
  > Colpo a segno! (TxC: 18). Inflitti 4 danni.
  > La catena si spezza. L'attacco fallisce (TxC: 11).
-Risultato: La Furia ha inflitto un totale di 9 danni in questo turno! HP Golem: 71
+Risultato: La Furia ha inflitto un totale di 9 danni in questo turno! HP Golem: 71 HP
 Il Golem di Carne contrattacca con uno schianto possente!
 L'eroe schiva il colpo!
 
-... [I round proseguono fino alla morte di uno dei due contendenti] ...
+... [i round proseguono fino alla morte di uno dei due contendenti] ...
 
 ----------------------------------------------------------------------
 Il Golem crolla a terra. Vittoria! Guadagni 500.0 gp.
-
 ```
 
-
+La terminazione della ricorsione è garantita dalla decrescita monotona di `bonusTxC` (si riduce di 2 a ogni chiamata), che rende prima o poi impossibile superare `classeArmatura` anche con il massimo sul d20.
