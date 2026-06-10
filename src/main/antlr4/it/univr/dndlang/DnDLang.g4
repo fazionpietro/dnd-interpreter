@@ -73,7 +73,7 @@ BLOCK_COMMENT : '/*' .*? '*/' -> skip ;
 
 // Struttura del programma: funzioni, hero, foe, quest
 program
-    : functionSection? heroSection? foeSection? questSection EOF
+    : (functionDecl | heroSection | foeSection)* questSection EOF
     ;
 
 // Sezioni principali del programma
