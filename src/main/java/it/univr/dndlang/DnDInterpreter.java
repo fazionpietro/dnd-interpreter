@@ -598,7 +598,8 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     FunctionSymbol function = env.lookupFunction(funcName, line);
     DnDLangParser.FunctionDeclContext delCtx = function.getDeclarationNode();
 
-    // valuta tutti gli argomenti prima di entrare nello scope della funzione
+    // valuta tutti gli argomenti del chiamante prima di entrare nello scope della
+    // funzione
     java.util.ArrayList<Object> evalArguments = new java.util.ArrayList<>();
     if (ctx.expr() != null) {
       for (DnDLangParser.ExprContext argCtx : ctx.expr()) {
@@ -606,12 +607,14 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
       }
     }
 
+    // recupera i parametri formali "richiesti"
     DnDLangParser.ParamListContext paramListCtx = delCtx.paramList();
     java.util.List<DnDLangParser.ParamDeclContext> formalParameter = new java.util.ArrayList<>();
     if (paramListCtx != null) {
       formalParameter = paramListCtx.paramDecl();
     }
 
+    // controlla l'arità
     if (evalArguments.size() != formalParameter.size()) {
       throw new DnDLangError(
           "Errore: la funzione '"
@@ -633,6 +636,9 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
 
     // il return è implementato lanciando una ReturnException catturata qui sotto
     try {
+
+      // dichiara parametri nello scope locale - se i tipi non combaciano lancia un
+      // errore
       for (int i = 0; i < formalParameter.size(); i++) {
         DnDLangParser.ParamDeclContext paramCtx = formalParameter.get(i);
         String paramType = paramCtx.getChild(0).getText();
@@ -890,9 +896,21 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     if ("Gold".equals(declaredType) && value instanceof Integer i) {
       return i.doubleValue();
     }
-    // HP, AC e Int sono sempre interi: tronca un Double
-    if (("HP".equals(declaredType) || "AC".equals(declaredType) || "Int".equals(declaredType))
-        && value instanceof Double d) {
+    // HP, AC sono sempre interi maggiori di 0: tronca un Double
+    if ("HP".equals(declaredType) || "AC".equals(declaredType)) {
+      int intVal;
+      if (value instanceof Double d) intVal = (int) d.doubleValue();
+      else if (value instanceof Integer i) intVal = i;
+      else throw new IllegalArgumentException("Tipo incompatibile con " + declaredType);
+
+      if (intVal < 0)
+        throw new IllegalArgumentException(
+            declaredType + " non può essere negativo (valore: " + intVal + ")");
+      return intVal;
+    }
+
+    // Int è ovviamente un intero: tronca un Double
+    if ("Int".equals(declaredType) && value instanceof Double d) {
       return (int) d.doubleValue();
     }
 

@@ -1,0 +1,125 @@
+def Int getModifier(Int score) {
+    return (score - 10) / 2;
+}
+
+def Int calcDamage(Int dieRoll, Int mod, Bool isCrit) {
+    Int base = isCrit ? dieRoll * 2 : dieRoll;
+    return base + mod;
+}
+
+// ricorsione: ogni colpo a segno riduce il bonus, garantendo terminazione
+def Int furiaBerserker(Int bonusTxC, Int classeArmatura) {
+    Int txc = d20 + bonusTxC;
+    if (txc >= classeArmatura) {
+        Int danno = d8;
+        print(i" > Colpo a segno! (TxC: ${txc}). Inflitti ${danno} danni.");
+        return danno + furiaBerserker(bonusTxC - 2, classeArmatura);
+    } else {
+        print(i" > La catena si spezza (TxC: ${txc}).");
+        return 0;
+    }
+}
+
+hero: {
+    String name  = "Tordek il Barbaro";
+    Int strength = 18;
+    Int strMod   = getModifier(strength);
+    Bool isRaging = true;
+    HP hp   = 50;
+    AC ac   = 16;
+    Gold gold = 120.0;
+}
+
+foe: {
+    String name  = "Golem di Carne";
+    Int strength = 14;
+    Int strMod   = getModifier(strength);
+    HP hp = 80;
+    AC ac = 14;
+}
+
+quest: {
+    print(i"--- ${hero.name} VS ${foe.name} ---");
+    print(i"HP: ${hero.hp}/${foe.hp} | AC: ${hero.ac}/${foe.ac} | Gold: ${hero.gold}");
+
+    // precedenza: 2 + 3 * 4 = 14, non 20
+    Int precedenza = 2 + 3 * 4;
+    print(i"Precedenza (2 + 3 * 4): ${precedenza}");
+
+    // logiche e uguaglianza
+    Bool entrambiVivi = (hero.hp > 0) && (foe.hp > 0);
+    print(i"Entrambi vivi: ${entrambiVivi}");
+
+    // dadi e meccaniche D&D (un paio di esempi)
+    Int tiroVantaggio = adv d20;
+    print(i"Tiro con vantaggio: ${tiroVantaggio}");
+
+    Bool resisteVeleno = (d20 + hero.strMod) save 14;
+    print(i"Resiste al veleno? ${resisteVeleno}");
+
+    // zucchero sintattico
+    Int contatore = 0;
+    contatore++;
+    ++contatore;
+    print(i"Contatore dopo ++ ++: ${contatore}");
+
+    hero.gold += 50;
+    print(i"Oro dopo += 50: ${hero.gold}");
+
+    // scoping e shadowing
+    Int x = 10;
+    {
+        Int x = 99; // shadow
+        print(i"x interno: ${x}");
+    }
+    print(i"x esterno: ${x}");
+
+    // combattimento: while, if/else, switch, ricorsione
+    Int round = 1;
+    while (hero.hp > 0 && foe.hp > 0) {
+        print(i"\n--- ROUND ${round} ---");
+
+        if (hero.isRaging) {
+            Int danniTotali = furiaBerserker(hero.strMod, foe.ac);
+            if (danniTotali > 0) {
+                foe.hp -= danniTotali;
+                print(i"Furia: ${danniTotali} danni totali. HP ${foe.name}: ${foe.hp}");
+            } else {
+                print("La catena di colpi fallisce subito.");
+            }
+        }
+
+        if (foe.hp > 0) {
+            Int txcFoe = d20;
+            switch (txcFoe) {
+                case 1: {
+                    print(i"Fallimento Critico per ${foe.name}!");
+                    foe.hp -= 2;
+                }
+                case 20: {
+                    Int dmg = calcDamage(d10, foe.strMod, true);
+                    hero.hp -= dmg;
+                    print(i"CRITICO nemico! Subisci ${dmg} danni. HP ${hero.name}: ${hero.hp}");
+                }
+                default: {
+                    if (txcFoe + foe.strMod >= hero.ac) {
+                        Int dmg = calcDamage(d10, foe.strMod, false);
+                        hero.hp -= dmg;
+                        print(i"Colpito! Subisci ${dmg} danni. HP ${hero.name}: ${hero.hp}");
+                    } else {
+                        print(i"${foe.name} manca il bersaglio.");
+                    }
+                }
+            }
+        }
+
+        round++;
+    }
+
+    String esito = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
+    print(i"\nEsito: ${esito} al round ${round - 1}!");
+
+    // gestione errori (Fail-Fast): decommentare per testare
+    // Int crash = 10 / 0;
+}
+

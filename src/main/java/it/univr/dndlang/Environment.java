@@ -32,7 +32,8 @@ public class Environment {
 
   /** Esce dal blocco corrente, tornando allo scope padre. */
   public void exitBlock() {
-    if (this.current != null) this.current = this.current.enclosing;
+    if (this.current != null)
+      this.current = this.current.enclosing;
   }
 
   /** Dichiara una nuova variabile nello scope corrente. */
@@ -118,6 +119,7 @@ public class Environment {
 
   /** Assegna un valore solo se la variabile esiste già. */
   public void setFallback(String name, Object value) {
-    if (contains(name)) assign(name, value);
+    if (contains(name))
+      assign(name, value);
   }
 }

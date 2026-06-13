@@ -6,8 +6,6 @@ hero: {
     Gold gold = 50.0;
 }
 
-quest: {
-    Int prova = adv d20;
-    print(prova);
+quest: { 
     print(i"Eroe: ${hero.name} | Class: ${hero.class} | HP: ${hero.hp} | AC: ${hero.ac} | Gold: ${hero.gold}");
 }

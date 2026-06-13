@@ -1,77 +1,130 @@
-/*
-Meccanica: Continua ad attaccare finché non manca il bersaglio.
-Ad ogni attacco consecutivo a segno, la penalità al TxC aumenta di 2.
-Restituisce la somma TOTALE dei danni inflitti in quell'unica catena di colpi.
-*/
+def Int getModifier(Int score) {
+    return (score - 10) / 2;
+}
+
+def Int calcDamage(Int dieRoll, Int mod, Bool isCrit) {
+    Int base = isCrit ? dieRoll * 2 : dieRoll;
+    return base + mod;
+}
+
+// catena di colpi del barbaro: termina quando un attacco manca
 def Int furiaBerserker(Int bonusTxC, Int classeArmatura) {
-    
     Int txc = d20 + bonusTxC;
-    
     if (txc >= classeArmatura) {
-        Int danno = d8; 
-        print(i" > Colpo a segno! (TxC: ${txc}). Inflitti ${danno} danni.");
-        
-        
+        Int danno = d8;
+        print(i"   colpo a segno (TxC ${txc}): ${danno} danni");
         return danno + furiaBerserker(bonusTxC - 2, classeArmatura);
     } else {
-        print(i" > La catena si spezza. L'attacco fallisce (TxC: ${txc}).");
-        return 0; 
+        print(i"   manca il colpo (TxC ${txc}), la furia si interrompe");
+        return 0;
     }
 }
 
 hero: {
-    String name = "Tordek il Barbaro";
-    HP hp = 50;
-    AC ac = 16;
-    Int strMod = 6; 
+    String name   = "Tordek";
+    Int strength  = 18;
+    Int strMod    = getModifier(strength);
+    Int dexterity = 12;
+    Int dexMod    = getModifier(dexterity);
+    HP hp         = 45;
+    AC ac         = 16;
+    Gold gold     = 80.0;
+    Int pozioni   = 2;
 }
 
 foe: {
-    String name = "Golem di Carne";
-    HP hp = 80;
-    AC ac = 14;     
+    String name  = "Orco Sciamano";
+    Int strength = 15;
+    Int strMod   = getModifier(strength);
+    HP hp        = 35;
+    AC ac        = 13;
 }
 
 quest: {
-    print(i"--- INIZIO SCONTRO: ${hero.name} VS ${foe.name} ---");
+    print(i"=== ${hero.name} entra nella tana dell'${foe.name} ===");
+
+    // --- la stanza d'ingresso ha un pavimento a trappola ---
+    print("Il pavimento cede sotto i tuoi piedi: tiro salvezza su Destrezza!");
+    Bool schivaTrappola = (d20 + hero.dexMod) save 13;
+
+    if (!schivaTrappola) {
+        Int dannoTrappola = d6 + 2;
+        hero.hp -= dannoTrappola;
+        print(i"Non schivi in tempo: subisci ${dannoTrappola} danni. HP: ${hero.hp}");
+    } else {
+        print("Salti via in tempo, illeso!");
+    }
+
+    // --- combattimento contro l'orco sciamano ---
+    print(i"\n=== INIZIA IL COMBATTIMENTO contro ${foe.name} (HP ${foe.hp}) ===");
     Int round = 1;
 
     while (hero.hp > 0 && foe.hp > 0) {
-        print(i"\n--- ROUND ${round} ---");
-        
-        print(i"${hero.name} entra in Ira e scatena la Furia Berserker!");
-        
-        Int danniTotali = furiaBerserker(hero.strMod, foe.ac);
-        
-        if (danniTotali > 0) {
-            foe.hp -= danniTotali;
-            print(i"Risultato: La Furia ha inflitto un totale di ${danniTotali} danni in questo turno! HP Golem: ${foe.hp}");
-        } else {
-            print("Risultato: Tordek manca clamorosamente il primo colpo.");
-        }
+        print(i"\n--- Round ${round} ---");
 
-        
-        if (foe.hp > 0) {
-            print(i"Il ${foe.name} contrattacca con uno schianto possente!");
-            Int txcFoe = d20 + 4;
-            
-            if (txcFoe >= hero.ac) {
-                Int dannoNemico = d10 + 5;
-                hero.hp -= dannoNemico;
-                print(i"Colpito! ${hero.name} subisce ${dannoNemico} danni. HP Eroe: ${hero.hp}");
-            } else {
-                print("L'eroe schiva il colpo!");
+        // turno dell'eroe: attacco con possibile furia
+        Int txc = d20 + hero.strMod;
+        print(i"${hero.name} attacca (TxC ${txc} vs AC ${foe.ac})");
+
+        switch (txc - hero.strMod) {
+            case 1: {
+                print("Fallimento critico! L'arma scivola di mano.");
+            }
+            case 20: {
+                Int dmg = calcDamage(d8, hero.strMod, true);
+                foe.hp -= dmg;
+                print(i"Colpo critico! ${dmg} danni. HP ${foe.name}: ${foe.hp}");
+                print("La furia berserker si scatena:");
+                Int extra = furiaBerserker(hero.strMod - 2, foe.ac);
+                foe.hp -= extra;
+                print(i"Danni extra dalla furia: ${extra}. HP ${foe.name}: ${foe.hp}");
+            }
+            default: {
+                if (txc >= foe.ac) {
+                    Int dmg = calcDamage(d8, hero.strMod, false);
+                    foe.hp -= dmg;
+                    print(i"Colpito! ${dmg} danni. HP ${foe.name}: ${foe.hp}");
+                } else {
+                    print("Mancato.");
+                }
             }
         }
-        
+
+        // l'eroe beve una pozione se scende sotto la metà degli HP massimi
+        if (hero.hp < 22 && hero.pozioni > 0) {
+            hero.pozioni--;
+            Int cura = d10 + 4;
+            hero.hp += cura;
+            print(i"${hero.name} beve una pozione: recupera ${cura} HP. HP: ${hero.hp} (pozioni rimaste: ${hero.pozioni})");
+        }
+
+        // turno del nemico
+        if (foe.hp > 0) {
+            Int txcFoe = adv d20;  // l'orco sciamano attacca con vantaggio
+            if (txcFoe + foe.strMod >= hero.ac) {
+                Int dmgFoe = calcDamage(d6, foe.strMod, false);
+                hero.hp -= dmgFoe;
+                print(i"${foe.name} ti colpisce con la sua ascia: ${dmgFoe} danni. HP: ${hero.hp}");
+            } else {
+                print(i"${foe.name} manca il bersaglio.");
+            }
+        }
+
         round++;
     }
 
-    print("----------------------------------------------------------------------");
+    // --- epilogo ---
+    print("\n=== FINE COMBATTIMENTO ===");
+    String esito = (hero.hp > 0) ? "VITTORIA" : "SCONFITTA";
+    print(i"Esito: ${esito} dopo ${round - 1} round.");
+
     if (hero.hp > 0) {
-        Gold tesoro = 500.0;
-        print(i"Il Golem crolla a terra. Vittoria! Guadagni ${tesoro} gp.");
+        Gold bottino = 75.5;
+        hero.gold += bottino;
+        print(i"Sul corpo dell'orco trovi ${bottino} gp. Oro totale: ${hero.gold} gp");
+        print(i"Pozioni rimaste: ${hero.pozioni}");
     } else {
-        print("La resistenza del Golem era troppa. Tordek cade in battaglia.");
+        print(i"${hero.name} cade privo di sensi nella tana dell'orco...");
     }
 }
+
