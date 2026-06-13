@@ -896,8 +896,17 @@ public class DnDInterpreter extends DnDLangBaseVisitor<Object> {
     if ("Gold".equals(declaredType) && value instanceof Integer i) {
       return i.doubleValue();
     }
-    // HP, AC sono sempre interi maggiori di 0: tronca un Double
-    if ("HP".equals(declaredType) || "AC".equals(declaredType)) {
+    // HP: intero, se scende sotto 0 viene bloccato a 0
+    if ("HP".equals(declaredType)) {
+      int intVal;
+      if (value instanceof Double d) intVal = (int) d.doubleValue();
+      else if (value instanceof Integer i) intVal = i;
+      else throw new IllegalArgumentException("Tipo incompatibile con " + declaredType);
+
+      return Math.max(intVal, 0);
+    }
+    // AC: intero, non può essere negativo
+    if ("AC".equals(declaredType)) {
       int intVal;
       if (value instanceof Double d) intVal = (int) d.doubleValue();
       else if (value instanceof Integer i) intVal = i;
