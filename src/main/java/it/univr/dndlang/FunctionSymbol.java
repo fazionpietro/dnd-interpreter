@@ -1,16 +1,22 @@
 package it.univr.dndlang;
 
-/** Simbolo di funzione: contiene tipo di ritorno e nodo AST della dichiarazione. */
+/** 
+ * Function symbol: contains its return type and the AST node of its declaration. 
+ */
 public class FunctionSymbol extends Symbol {
   private final DnDLangParser.FunctionDeclContext declarationNode;
 
-  /** Crea un simbolo di funzione con tipo di ritorno e nodo della dichiarazione. */
+  /** 
+   * Creates a function symbol with a return type and its declaration node. 
+   */
   public FunctionSymbol(String returnType, DnDLangParser.FunctionDeclContext declarationNode) {
     super(returnType);
     this.declarationNode = declarationNode;
   }
 
-  /** Restituisce il nodo AST della dichiarazione della funzione. */
+  /** 
+   * Retrieves the AST node of the function declaration. 
+   */
   public DnDLangParser.FunctionDeclContext getDeclarationNode() {
     return declarationNode;
   }

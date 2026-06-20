@@ -1,21 +1,29 @@
 package it.univr.dndlang;
 
-/** Simbolo di variabile: contiene tipo e valore corrente. */
+/** 
+ * Variable symbol: contains its type and current runtime value. 
+ */
 public class VariableSymbol extends Symbol {
   private Object value;
 
-  /** Crea un simbolo di variabile con tipo e valore iniziale. */
+  /** 
+   * Creates a variable symbol with an initial type and value. 
+   */
   public VariableSymbol(String type, Object value) {
     super(type);
     this.value = value;
   }
 
-  /** Restituisce il valore corrente della variabile. */
+  /** 
+   * Retrieves the current value of the variable. 
+   */
   public Object getValue() {
     return value;
   }
 
-  /** Aggiorna il valore della variabile. */
+  /** 
+   * Updates the value of the variable. 
+   */
   public void setValue(Object value) {
     this.value = value;
   }

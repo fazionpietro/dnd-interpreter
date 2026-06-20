@@ -1,15 +1,29 @@
 package it.univr.dndlang;
 
-/** Classe base astratta per i simboli nella tabella dei simboli. */
+/*
+ * DESIGN
+ * ------
+ *
+ * Base class for our symbol table hierarchy. Both variables and functions 
+ * share the concept of having a declared type, which is centralized here.
+ */
+
+/** 
+ * Abstract base class for symbols in the symbol table. 
+ */
 public abstract class Symbol {
   private final String type;
 
-  /** Crea un simbolo con il tipo specificato. */
+  /** 
+   * Creates a symbol with the specified type. 
+   */
   protected Symbol(String type) {
     this.type = type;
   }
 
-  /** Restituisce il tipo del simbolo. */
+  /** 
+   * Retrieves the type of the symbol. 
+   */
   public String getType() {
     return type;
   }
