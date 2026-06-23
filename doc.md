@@ -269,13 +269,13 @@ $$
     \text{SeqP} ~ \frac{
         (\overline{\sigma},\ c_1) \rightarrow (\overline{\sigma}',\ c_1')
     }{
-        (\overline{\sigma},\ c_1 \,;\, c_2) \rightarrow (\overline{\sigma}',\ c_1' \,;\, c_2)
+        (\overline{\sigma},\ c_1 ; c_2) \rightarrow (\overline{\sigma}',\ c_1' ; c_2)
     }
     \quad \quad
     \text{SeqE} ~ \frac{
         -
     }{
-        (\overline{\sigma},\ \epsilon \,;\, c) \rightarrow (\overline{\sigma},\ c)
+        (\overline{\sigma},\ \epsilon ; c) \rightarrow (\overline{\sigma},\ c)
     }
 $$
 
